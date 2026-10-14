@@ -54,6 +54,16 @@ to queue · **LB/RB** previous/next · **LT/RT** volume · **Start** Now Playing
 · **Select** Up next. Full details, keyboard equivalents and Steam Input tips:
 [docs/CONTROLS.md](docs/CONTROLS.md).
 
+## Install
+
+A Flatpak bundle can be built with `ci/flatpak.sh` (see
+[DEVELOPMENT.md](docs/DEVELOPMENT.md#flatpak)) and installed on SteamOS or
+any Flatpak-enabled distribution:
+
+```sh
+flatpak install --user dist/bigify.flatpak
+```
+
 ## Build
 
 Requires Rust 1.90+, Qt 6.8+ and PulseAudio/ALSA/udev headers. Quick start

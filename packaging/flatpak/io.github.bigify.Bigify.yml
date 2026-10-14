@@ -1,10 +1,11 @@
-# DRAFT Flatpak manifest — not yet validated. Remaining work before release:
-#  * generate cargo-sources.json with flatpak-cargo-generator.py (offline build)
-#  * add an app icon and metainfo, and check permissions on SteamOS
+# Bigify Flatpak manifest. Build with ci/flatpak.sh (Docker) or:
+#   flatpak-cargo-generator.py Cargo.lock -o packaging/flatpak/cargo-sources.json
+#   flatpak-builder --user --install-deps-from=flathub --force-clean \
+#       flatpak-build packaging/flatpak/io.github.bigify.Bigify.yml
 # The app id is a placeholder until the project has a permanent home.
 app-id: io.github.bigify.Bigify
 runtime: org.kde.Platform
-runtime-version: '6.8'
+runtime-version: '6.10'
 sdk: org.kde.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
@@ -14,16 +15,20 @@ finish-args:
   - --socket=wayland
   - --socket=fallback-x11
   - --device=dri
-  # Audio output (PipeWire via the PulseAudio protocol)
+  # Audio output (PipeWire via the PulseAudio protocol).
   - --socket=pulseaudio
-  # Spotify streaming, plus LAN discovery for phone sign-in
+  # Spotify streaming, and mDNS so the Spotify app can sign Bigify in.
   - --share=network
-  # Game controllers (evdev)
+  # Game controllers (evdev via gilrs).
   - --device=input
+  # MPRIS: media keys and desktop media controls.
+  - --own-name=org.mpris.MediaPlayer2.Bigify
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin
   env:
     CARGO_HOME: /run/build/bigify/cargo
+    CARGO_NET_OFFLINE: 'true'
+    QMAKE: /usr/bin/qmake6
 modules:
   - name: bigify
     buildsystem: simple
@@ -31,7 +36,15 @@ modules:
       - cargo --offline build --release --locked -p bigify
       - install -Dm755 target/release/bigify /app/bin/bigify
       - install -Dm644 packaging/linux/io.github.bigify.Bigify.desktop /app/share/applications/io.github.bigify.Bigify.desktop
+      - install -Dm644 packaging/linux/io.github.bigify.Bigify.svg /app/share/icons/hicolor/scalable/apps/io.github.bigify.Bigify.svg
+      - install -Dm644 packaging/linux/io.github.bigify.Bigify.metainfo.xml /app/share/metainfo/io.github.bigify.Bigify.metainfo.xml
     sources:
       - type: dir
         path: ../..
+        skip:
+          - target
+          - screenshots
+          - flatpak-build
+          - .flatpak-builder
+          - .git
       - cargo-sources.json

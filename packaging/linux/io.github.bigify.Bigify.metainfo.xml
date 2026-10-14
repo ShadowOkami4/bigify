@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The app id is a placeholder until the project has a permanent home. -->
+<component type="desktop-application">
+  <id>io.github.bigify.Bigify</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Bigify</name>
+  <summary>Spotify Connect player for TVs and Steam Deck</summary>
+  <developer id="io.github.bigify">
+    <name>Bigify contributors</name>
+  </developer>
+  <description>
+    <p>
+      Bigify is a full-screen music player designed for the living room: big
+      type, large artwork and controller-first navigation. It plays music
+      through Spotify Connect and can be signed in from the Spotify app on
+      your phone without typing on the TV.
+    </p>
+    <ul>
+      <li>Home, Search, Library, artist, album and playlist pages</li>
+      <li>Expressive Now Playing screen with colors from the album art</li>
+      <li>Full game controller support, including Steam Deck</li>
+      <li>Media keys and desktop media controls (MPRIS)</li>
+    </ul>
+    <p>
+      Requires Spotify Premium. Bigify is an independent open-source project
+      and is not affiliated with, endorsed or sponsored by Spotify.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.bigify.Bigify.desktop</launchable>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+    <category>Player</category>
+  </categories>
+  <keywords>
+    <keyword>music</keyword>
+    <keyword>spotify</keyword>
+    <keyword>tv</keyword>
+    <keyword>steam deck</keyword>
+  </keywords>
+  <requires>
+    <display_length compare="ge">720</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>gamepad</control>
+    <control>tv-remote</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-10-14">
+      <description>
+        <p>First preview release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

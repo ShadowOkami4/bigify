@@ -55,6 +55,25 @@ ci/run.sh cargo build --release
 `ci/run.sh` mounts the source tree and keeps the cargo registry and `target/`
 in Docker volumes.
 
+## Flatpak
+
+```sh
+docker build -t bigify-flatpak -f ci/flatpak.Dockerfile .
+ci/flatpak.sh                      # -> dist/bigify.flatpak
+flatpak install --user dist/bigify.flatpak
+flatpak run io.github.bigify.Bigify
+```
+
+`ci/flatpak.sh` validates the AppStream metadata, generates the offline
+cargo sources (`flatpak-cargo-generator.py`) and builds against
+`org.kde.Platform//6.10`. The runtimes are cached in the
+`bigify-flatpak-repo` Docker volume (several GB on the first run). It runs
+the container `--privileged` so flatpak-builder's sandbox works.
+
+Sandbox permissions: Wayland/X11, DRI, PulseAudio (PipeWire), network
+(streaming and mDNS sign-in), `--device=input` (controllers) and the MPRIS
+bus name. Flatpak and SteamOS's Discover can install the bundle directly.
+
 ## Tests
 
 ```sh

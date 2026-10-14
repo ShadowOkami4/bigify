@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Bigify app icon. Brand violet squircle with a play glyph inside a
+     rounded "screen", echoing the TV-first focus. GPL-3.0-or-later. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect x="8" y="8" width="112" height="112" rx="34" fill="#7C5CFF"/>
+  <rect x="8" y="8" width="112" height="56" rx="34" fill="#9A82FF" opacity="0.35"/>
+  <!-- screen -->
+  <rect x="26" y="32" width="76" height="52" rx="14" fill="#E9E1FF"/>
+  <!-- play -->
+  <path d="M56 46.5v23a2.5 2.5 0 0 0 3.8 2.1l18.4-11.5a2.5 2.5 0 0 0 0-4.2L59.8 44.4A2.5 2.5 0 0 0 56 46.5z" fill="#2A1A73"/>
+  <!-- stand -->
+  <rect x="46" y="92" width="36" height="8" rx="4" fill="#E9E1FF"/>
+</svg>
