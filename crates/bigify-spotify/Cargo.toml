@@ -27,3 +27,9 @@ http = "1"
 bytes = "1"
 # Decoding artwork for dynamic color; JPEG/PNG only.
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+# OAuth PKCE for the user's own Spotify app (library access) and opening the
+# local setup page in the browser.
+sha2 = "0.10"
+data-encoding = "2"
+getrandom = "0.3"
+open = "5"

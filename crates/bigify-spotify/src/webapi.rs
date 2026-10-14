@@ -18,7 +18,10 @@ use librespot::core::session::Session;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
+use std::sync::Arc;
+
 use crate::errors::from_librespot;
+use crate::userauth::UserAuth;
 
 const API: &str = "https://api.spotify.com/v1";
 
@@ -634,11 +637,17 @@ enum Stage {
 #[derive(Clone)]
 pub struct WebApi {
     session: Session,
+    /// The user's own Spotify app, when set up (see [`crate::userauth`]).
+    user: Option<Arc<UserAuth>>,
 }
 
+/// Shown when Spotify throttles the built-in access and no app is set up.
+const RATE_LIMITED_HINT: &str = "Spotify is limiting Bigify's built-in library access. \
+Set up library access in Settings (one-time, about 3 minutes) to fix this.";
+
 impl WebApi {
-    pub fn new(session: Session) -> Self {
-        Self { session }
+    pub fn new(session: Session, user: Option<Arc<UserAuth>>) -> Self {
+        Self { session, user }
     }
 
     /// Obtain an access token from `source`.
@@ -668,6 +677,34 @@ impl WebApi {
     }
 
     async fn request(&self, method: http::Method, path_and_query: &str) -> ServiceResult<Bytes> {
+        // The user's own app has its own quota and is used exclusively when
+        // configured; built-in tokens are only a fallback if it breaks.
+        if let Some(user) = &self.user {
+            match user.access_token(&self.session).await {
+                Some(Ok(token)) => {
+                    return self.send_with_token(&token, method, path_and_query).await;
+                }
+                Some(Err(e)) => log::warn!("library token unavailable, using built-in access: {e}"),
+                None => {}
+            }
+        }
+        self.request_builtin(method, path_and_query)
+            .await
+            .map_err(|e| {
+                if e.kind == ErrorKind::RateLimited {
+                    ServiceError::new(ErrorKind::RateLimited, RATE_LIMITED_HINT)
+                } else {
+                    e
+                }
+            })
+    }
+
+    /// Built-in access: tokens minted from the librespot session.
+    async fn request_builtin(
+        &self,
+        method: http::Method,
+        path_and_query: &str,
+    ) -> ServiceResult<Bytes> {
         let preferred = TokenSource::preferred();
         let first = self
             .request_with(preferred, method.clone(), path_and_query)
@@ -703,6 +740,17 @@ impl WebApi {
         path_and_query: &str,
     ) -> Result<Bytes, (Stage, ServiceError)> {
         let token = self.token(source).await.map_err(|e| (Stage::Token, e))?;
+        self.send_with_token(&token, method, path_and_query)
+            .await
+            .map_err(|e| (Stage::Http, e))
+    }
+
+    async fn send_with_token(
+        &self,
+        token: &str,
+        method: http::Method,
+        path_and_query: &str,
+    ) -> ServiceResult<Bytes> {
         let req = http::Request::builder()
             .method(method)
             .uri(format!("{API}{path_and_query}"))
@@ -710,13 +758,8 @@ impl WebApi {
             .header(http::header::ACCEPT, "application/json")
             .header(http::header::CONTENT_LENGTH, "0")
             .body(Bytes::new())
-            .map_err(|e| {
-                (
-                    Stage::Http,
-                    ServiceError::internal(format!("Invalid request ({e})")),
-                )
-            })?;
-        // librespot's client already honours 429 Retry-After.
+            .map_err(|e| ServiceError::internal(format!("Invalid request ({e})")))?;
+        // librespot's client already honours short 429 Retry-After values.
         self.session
             .http_client()
             .request_body(req)
@@ -725,7 +768,7 @@ impl WebApi {
                 // Log the endpoint without its query (search terms are personal).
                 let path = path_and_query.split('?').next().unwrap_or("");
                 log::warn!("Web API {path} failed: {e}");
-                (Stage::Http, from_librespot(e))
+                from_librespot(e)
             })
     }
 

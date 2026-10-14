@@ -360,6 +360,19 @@ Window {
             }
         }
 
+        property string libraryStatus: "notConfigured"
+        Connections {
+            target: Backend
+            function onLibraryAccessChanged() {
+                const status = JSON.parse(Backend.libraryAccess).status
+                if (status === "connected" && app.libraryStatus !== "connected") {
+                    home.reload()
+                    library.reload()
+                }
+                app.libraryStatus = status
+            }
+        }
+
         Connections {
             target: Backend
             function onNotify(level, message) { toast.show(level, message) }

@@ -15,6 +15,13 @@ FocusScope {
     signal toastRequested(string level, string message)
 
     readonly property var diagnostics: JSON.parse(Backend.diagnostics())
+    readonly property var library: JSON.parse(Backend.libraryAccess)
+    readonly property string libraryText: ({
+        connected: qsTr("Connected"),
+        setup: qsTr("Waiting for setup in your browser…"),
+        error: qsTr("Setup failed"),
+        notConfigured: qsTr("Not set up")
+    })[library.status] || ""
 
     Text {
         id: title
@@ -81,14 +88,19 @@ FocusScope {
             required property var model
             width: list.width - list.leftMargin - list.rightMargin
             focus: ListView.isCurrentItem
-            label: model.label
+            label: model.key === "librarySetup"
+                   ? (root.library.status === "setup" ? qsTr("Cancel setup")
+                      : root.library.status === "connected" ? qsTr("Set up again") : model.label)
+                   : model.label
             description: model.description
             control: model.control
             destructive: model.destructive
             checked: model.control === "toggle" ? root.s[model.key] === true : false
             value: model.key ? root.s[model.key] : undefined
             options: model.options ? JSON.parse(model.options) : []
-            valueText: model.key === "account" ? (Backend.userName || "")
+            valueText: model.key === "libraryAccess" ? root.libraryText
+                     : model.key === "librarySetup" && root.library.status === "setup" ? root.library.message
+                     : model.key === "account" ? (Backend.userName || "")
                      : model.key === "version" ? Backend.appVersion
                      : model.key === "logFile" ? Backend.logFilePath
                      : model.key === "deviceName" ? (root.s.deviceName || "")
@@ -97,6 +109,11 @@ FocusScope {
             onChosen: v => root.set(model.key, v)
             onTriggered: {
                 if (model.key === "signOut") Backend.signOut()
+                else if (model.key === "librarySetup") {
+                    if (root.library.status === "setup") Backend.cancelLibrarySetup()
+                    else Backend.startLibrarySetup()
+                }
+                else if (model.key === "libraryRemove") Backend.removeLibraryAccess()
                 else if (model.key === "quit") root.quitRequested()
             }
         }
@@ -107,6 +124,10 @@ FocusScope {
         // Account
         ListElement { group: "Account"; key: "account"; label: "Signed in"; description: "Spotify Premium is required for playback."; control: "info"; destructive: false; options: "" }
         ListElement { group: "Account"; key: "signOut"; label: "Sign out"; description: "Removes Bigify's stored Spotify credentials from this device."; control: "action"; destructive: true; options: "" }
+        // Library access
+        ListElement { group: "Library access"; key: "libraryAccess"; label: "Library access"; description: "Home, Search and your Library need a Spotify app registered by you. Playback works without it."; control: "info"; destructive: false; options: "" }
+        ListElement { group: "Library access"; key: "librarySetup"; label: "Set up library access"; description: "Opens a setup page in the browser on this device (use Desktop Mode on Steam Deck). One-time, about 3 minutes."; control: "action"; destructive: false; options: "" }
+        ListElement { group: "Library access"; key: "libraryRemove"; label: "Remove library access"; description: "Deletes the stored access token from this device."; control: "action"; destructive: true; options: "" }
         // Playback
         ListElement { group: "Playback"; key: "audioQuality"; label: "Audio quality"; description: "Streaming bitrate. Applies after restart."; control: "choice"; destructive: false
             options: '[{"value":"low","label":"Low · 96 kbit/s"},{"value":"normal","label":"Normal · 160 kbit/s"},{"value":"high","label":"High · 320 kbit/s"}]' }

@@ -38,6 +38,11 @@ pub enum Command {
     SignInWithBrowser,
     /// Abandon an in-progress browser sign-in.
     CancelSignIn,
+    /// Open the one-time library access setup (user's own Spotify app).
+    StartLibrarySetup,
+    CancelLibrarySetup,
+    /// Forget the library access token.
+    RemoveLibraryAccess,
     /// Forget cached credentials and disconnect.
     SignOut,
 

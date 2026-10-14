@@ -10,6 +10,7 @@ mod engine;
 mod errors;
 mod metadata;
 mod player_events;
+pub mod userauth;
 pub mod webapi;
 
 use std::thread::JoinHandle;

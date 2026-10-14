@@ -63,6 +63,11 @@ Download the Flatpak from the
 flatpak install --user ./bigify-*-x86_64.flatpak
 ```
 
+Playback works right after signing in. For Home, Search and Library, run the
+one-time **library access** setup (Settings → Set up library access; you
+register a free Spotify developer app — Spotify blocks third-party use of its
+built-in access).
+
 **Steam Deck / SteamOS:** step-by-step guide, including adding Bigify to
 Gaming Mode and the controller layout, in [docs/INSTALL.md](docs/INSTALL.md).
 
@@ -81,18 +86,18 @@ Native build instructions for Debian, Fedora and Arch/SteamOS:
 
 ## Important: how Bigify reaches Spotify
 
-Playback, Connect and sign-in use librespot. Browse features (home, search,
-library, queue) call the Spotify Web API with the access token of the
-librespot session, because Spotify's 2026 developer rules limit a regular
-developer app to five users. **This borrows Spotify's own client identity and
-may be rate-limited or blocked by Spotify at any time.** Details and
-alternatives: [ADR 0003](docs/adr/0003-web-api-access.md).
+Playback, Spotify Connect and sign-in use librespot. Browse features (Home,
+Search, Library, queue) use the Spotify Web API through **a Spotify app you
+register yourself** (one-time setup inside Bigify). Spotify rate-limits
+third-party use of its own client's tokens, so this is the reliable and
+terms-compliant way. Details: [ADR 0003](docs/adr/0003-web-api-access.md).
 
 ## Privacy and security
 
 - No credentials are stored in the source or written to logs. librespot keeps
-  reusable credentials in `$XDG_STATE_HOME/bigify/credentials.json` (mode
-  0600); *Settings → Sign out* deletes it.
+  reusable credentials in `$XDG_STATE_HOME/bigify/credentials.json`, the
+  library access token lives in `webapi-token.json` next to it (both mode
+  0600); *Settings → Sign out* deletes both.
 - Logs never contain tokens or search queries; token-handling modules are
   capped at `info`.
 - Artwork is fetched only from Spotify's image CDN.

@@ -10,6 +10,7 @@
    flatpak install --user ./bigify-*-x86_64.flatpak
    ```
 3. In Steam (Desktop Mode): **Add a Game → Add a Non-Steam Game → Bigify**, then return to Gaming Mode.
+4. For Home, Search and Library: **Settings → Set up library access** once (Desktop Mode, about 3 minutes).
 
 Full guide, including other distributions and updating: [docs/INSTALL.md](https://github.com/ShadowOkami4/bigify/blob/main/docs/INSTALL.md)
 

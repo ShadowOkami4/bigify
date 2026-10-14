@@ -85,6 +85,10 @@ pub mod qobject {
         /// "gamepad" or "keyboard" (keyboard, mouse, touch): which button
         /// hints to show. Kept current by the C++ input-mode filter.
         #[qproperty(QString, input_mode, cxx_name = "inputMode")]
+        /// Library access via the user's own Spotify app, as JSON
+        /// `{status, message}`; status is "notConfigured", "setup",
+        /// "connected" or "error".
+        #[qproperty(QString, library_access, cxx_name = "libraryAccess")]
         /// Button-label family of the controller in use: "deck", "xbox",
         /// "playstation" or "nintendo".
         #[qproperty(QString, controller_family, cxx_name = "controllerFamily")]
@@ -96,6 +100,13 @@ pub mod qobject {
         fn cancel_sign_in(self: Pin<&mut Self>);
         #[qinvokable]
         fn sign_out(self: Pin<&mut Self>);
+        /// Open the one-time library access setup page in the browser.
+        #[qinvokable]
+        fn start_library_setup(self: Pin<&mut Self>);
+        #[qinvokable]
+        fn cancel_library_setup(self: Pin<&mut Self>);
+        #[qinvokable]
+        fn remove_library_access(self: Pin<&mut Self>);
 
         #[qinvokable]
         fn toggle_play(self: Pin<&mut Self>);
@@ -298,6 +309,7 @@ pub struct BackendRust {
     design_preview: bool,
     dev_json: QString,
     input_mode: QString,
+    library_access: QString,
     controller_family: QString,
 
     playback: PlaybackState,
@@ -339,6 +351,7 @@ impl Default for BackendRust {
             design_preview: false,
             dev_json: QString::from("{}"),
             input_mode: QString::from("keyboard"),
+            library_access: QString::from(r#"{"status":"notConfigured","message":""}"#),
             controller_family: QString::from("xbox"),
             playback: PlaybackState::new(),
             settings: Settings::default(),
@@ -752,6 +765,24 @@ impl qobject::Backend {
                     .save_failed(QString::from(uri.as_str()), QString::from(message.as_str()));
                 self.notify_error(&format!("Couldn't update your library. {message}"));
             }
+            Event::LibraryAccess { status, message } => {
+                let previous = self.library_access().to_string();
+                let was_connected = previous.contains(r#""status":"connected""#);
+                match status.as_str() {
+                    "error" => self
+                        .as_mut()
+                        .notify_error(&format!("Library access: {message}")),
+                    "connected" if !was_connected => self.as_mut().notify(
+                        QString::from("info"),
+                        QString::from("Library access connected"),
+                    ),
+                    _ => {}
+                }
+                self.as_mut().set_library_access(json(&serde_json::json!({
+                    "status": status,
+                    "message": message,
+                })));
+            }
             Event::CommandFailed { message } => {
                 self.as_mut().rust_mut().playback.clear_pending();
                 self.as_mut().sync_pending();
@@ -772,6 +803,20 @@ impl qobject::Backend {
 
     pub fn sign_out(self: Pin<&mut Self>) {
         send(Command::SignOut);
+    }
+
+    pub fn start_library_setup(self: Pin<&mut Self>) {
+        if !send(Command::StartLibrarySetup) {
+            self.notify_error("Not connected to Spotify yet");
+        }
+    }
+
+    pub fn cancel_library_setup(self: Pin<&mut Self>) {
+        send(Command::CancelLibrarySetup);
+    }
+
+    pub fn remove_library_access(self: Pin<&mut Self>) {
+        send(Command::RemoveLibraryAccess);
     }
 
     pub fn toggle_play(self: Pin<&mut Self>) {

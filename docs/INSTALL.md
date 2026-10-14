@@ -67,6 +67,33 @@ On first start, Bigify shows the sign-in screen:
 
 Bigify remembers the sign-in. *Settings → Sign out* removes it.
 
+### 5. Library access (Home, Search, Library) — one-time setup
+
+Playback works right after signing in. To see **Home, Search and your
+Library**, Bigify needs a Spotify app registered by you: Spotify blocks
+third-party apps from using its own built-in access ("Spotify is busy").
+It's free and takes about three minutes. Do it in **Desktop Mode**:
+
+1. Start Bigify, go to **Settings → Library access → Set up library
+   access**. Your browser opens a Bigify setup page.
+2. Follow the steps on that page:
+   - Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+     and log in with your Spotify account.
+   - **Create app** — name `Bigify`, any description.
+   - **Redirect URI:** `http://127.0.0.1:8899/callback` → **Add**.
+   - Tick **Web API**, accept the terms, **Save**.
+   - Copy the app's **Client ID** and paste it into the setup page →
+     **Continue to Spotify** → **Agree**.
+3. The page says *Done* and Bigify shows *Library access connected*. Home,
+   Search and Library now load — also in Gaming Mode.
+
+Tip: Steam + X opens the on-screen keyboard in Desktop Mode.
+
+Bigify stores only a revocable access token
+(`~/.var/app/io.github.ShadowOkami4.bigify/.local/state/bigify/webapi-token.json`,
+readable only by you). Remove it with *Settings → Remove library access*, or
+revoke it in your Spotify account under *Manage apps*.
+
 ### Update
 
 Download the new release and run the same command; Flatpak replaces the
@@ -101,6 +128,9 @@ flatpak run io.github.ShadowOkami4.bigify
 
 | Problem | Fix |
 |---|---|
+| Home/Search/Library: "Spotify is limiting Bigify's built-in library access" | Do the one-time [library access setup](#5-library-access-home-search-library--one-time-setup). |
+| Setup page says the Client ID is invalid | Copy the **Client ID** (32 characters), not the Client secret. |
+| Spotify shows "INVALID_CLIENT: Invalid redirect URI" | The app's Redirect URI must be exactly `http://127.0.0.1:8899/callback`. |
 | "Bigify" doesn't appear in the phone's device list | Same Wi-Fi network? Some routers block device discovery (mDNS/"client isolation"); use browser sign-in instead. |
 | No sound | Bigify uses the system's default output. Check the volume/output in SteamOS quick settings. |
 | Controller does nothing | Use the **Gamepad** controller template; make sure *Read controllers directly* is on. |

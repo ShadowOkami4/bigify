@@ -37,6 +37,7 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::time::Instant;
 
 use crate::artwork::{self, PaletteCache};
+use crate::userauth::{self, SetupEvent, SetupServer, UserAuth};
 use crate::webapi::WebApi;
 use crate::{metadata, player_events};
 
@@ -101,6 +102,10 @@ pub struct Engine {
     locally_active: Arc<AtomicBool>,
     artist_cursors: Arc<Mutex<HashMap<u32, String>>>,
     palettes: Arc<Mutex<PaletteCache>>,
+    /// Library access through the user's own Spotify app.
+    user_auth: Arc<UserAuth>,
+    setup: Option<SetupServer>,
+    setup_events: Option<mpsc::UnboundedReceiver<SetupEvent>>,
 }
 
 impl Engine {
@@ -138,6 +143,9 @@ impl Engine {
             session_config,
             cache,
             credentials_file: credentials_dir.join("credentials.json"),
+            user_auth: UserAuth::load(credentials_dir.join("webapi-token.json")),
+            setup: None,
+            setup_events: None,
             session,
             player,
             mixer,
@@ -273,6 +281,14 @@ impl Engine {
                         }
                     }
                 },
+                event = async {
+                    match self.setup_events.as_mut() {
+                        Some(rx) => rx.recv().await,
+                        None => std::future::pending().await,
+                    }
+                }, if self.setup_events.is_some() => {
+                    self.handle_setup_event(event).await;
+                },
                 _ = tokio::time::sleep_until(connect_deadline), if self.connect_at.is_some() => {
                     self.connect().await;
                 },
@@ -304,6 +320,7 @@ impl Engine {
 
         log::info!("shutting down Spotify service");
         self.cancel_oauth();
+        self.stop_library_setup();
         self.teardown_connection().await;
         if let Some(discovery) = self.discovery.take() {
             let _ = tokio::time::timeout(Duration::from_secs(2), discovery.shutdown()).await;
@@ -359,6 +376,7 @@ impl Engine {
                     user: self.session.username(),
                     device_name: self.settings.device_name.clone(),
                 });
+                self.emit_library_access().await;
             }
             Ok(Err(e)) if matches!(e.kind, LsKind::Unauthenticated | LsKind::PermissionDenied) => {
                 log::warn!("stored credentials rejected: {}", e.kind);
@@ -506,6 +524,88 @@ impl Engine {
         });
     }
 
+    async fn emit_library_access(&self) {
+        let status = if self.setup.is_some() {
+            "setup"
+        } else if self.user_auth.is_configured().await {
+            "connected"
+        } else {
+            "notConfigured"
+        };
+        self.emit(Event::LibraryAccess {
+            status: status.into(),
+            message: String::new(),
+        });
+    }
+
+    fn library_access_error(&self, message: impl Into<String>) {
+        self.emit(Event::LibraryAccess {
+            status: "error".into(),
+            message: message.into(),
+        });
+    }
+
+    fn start_library_setup(&mut self) {
+        if self.setup.is_none() {
+            let (tx, rx) = mpsc::unbounded_channel();
+            match userauth::start_setup_server(tx) {
+                Ok(server) => {
+                    self.setup = Some(server);
+                    self.setup_events = Some(rx);
+                }
+                Err(e) => {
+                    log::warn!("library setup page unavailable: {e}");
+                    self.library_access_error(format!(
+                        "Couldn't open the setup page (port {} busy?).",
+                        userauth::SETUP_PORT
+                    ));
+                    return;
+                }
+            }
+        }
+        let url = userauth::setup_url();
+        log::info!("library setup page at {url}");
+        open::that_in_background(&url);
+        self.emit(Event::LibraryAccess {
+            status: "setup".into(),
+            message: url,
+        });
+    }
+
+    fn stop_library_setup(&mut self) {
+        self.setup_events = None;
+        if let Some(server) = self.setup.take() {
+            server.stop();
+        }
+    }
+
+    async fn handle_setup_event(&mut self, event: Option<SetupEvent>) {
+        self.stop_library_setup();
+        match event {
+            Some(SetupEvent::Code {
+                client_id,
+                code,
+                verifier,
+            }) => {
+                match userauth::exchange_code(&self.session, &client_id, &code, &verifier).await {
+                    Ok(token) => match self.user_auth.set(token).await {
+                        Ok(()) => {
+                            log::info!("library access connected");
+                            self.emit_library_access().await;
+                        }
+                        Err(e) => {
+                            log::warn!("could not store library token: {e}");
+                            self.library_access_error("Couldn't save the library access token.");
+                        }
+                    },
+                    Err(e) => self.library_access_error(e.message),
+                }
+            }
+            Some(SetupEvent::Failed(message)) => self.library_access_error(message),
+            None => self.emit_library_access().await,
+        }
+    }
+
     fn spirc_or_fail(&self) -> Option<&Spirc> {
         if self.spirc.is_none() {
             self.fail("Not connected to Spotify yet");
@@ -515,7 +615,10 @@ impl Engine {
 
     fn web(&self) -> Result<WebApi, ServiceError> {
         if self.connected {
-            Ok(WebApi::new(self.session.clone()))
+            Ok(WebApi::new(
+                self.session.clone(),
+                Some(self.user_auth.clone()),
+            ))
         } else {
             Err(ServiceError::not_ready())
         }
@@ -536,8 +639,20 @@ impl Engine {
                 self.cancel_oauth();
                 self.go_signed_out();
             }
+            Command::StartLibrarySetup => self.start_library_setup(),
+            Command::CancelLibrarySetup => {
+                self.stop_library_setup();
+                self.emit_library_access().await;
+            }
+            Command::RemoveLibraryAccess => {
+                self.stop_library_setup();
+                self.user_auth.clear().await;
+                self.emit_library_access().await;
+            }
             Command::SignOut => {
                 self.cancel_oauth();
+                self.stop_library_setup();
+                self.user_auth.clear().await;
                 self.teardown_connection().await;
                 self.forget_credentials();
                 self.locally_active.store(false, Ordering::Relaxed);
@@ -836,6 +951,9 @@ fn command_name(cmd: &Command) -> &'static str {
         Command::SignInWithBrowser => "SignInWithBrowser",
         Command::CancelSignIn => "CancelSignIn",
         Command::SignOut => "SignOut",
+        Command::StartLibrarySetup => "StartLibrarySetup",
+        Command::CancelLibrarySetup => "CancelLibrarySetup",
+        Command::RemoveLibraryAccess => "RemoveLibraryAccess",
         Command::Play => "Play",
         Command::Pause => "Pause",
         Command::Next => "Next",

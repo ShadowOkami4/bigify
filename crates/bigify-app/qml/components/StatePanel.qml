@@ -59,8 +59,20 @@ FocusScope {
             font.pixelSize: Theme.type.bodyLarge
         }
         PillButton {
+            id: setupButton
+            visible: root.state_ === "error" && root.errorKind === "rateLimited"
+                     && JSON.parse(Backend.libraryAccess).status !== "connected"
+            focus: visible
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: qsTr("Set up library access")
+            icon: "library"
+            onClicked: Backend.startLibrarySetup()
+            KeyNavigation.down: retryButton
+        }
+        PillButton {
+            id: retryButton
             visible: root.retryable
-            focus: true
+            focus: !setupButton.visible
             anchors.horizontalCenter: parent.horizontalCenter
             text: qsTr("Try again")
             icon: "repeat"

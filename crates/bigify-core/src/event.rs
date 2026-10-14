@@ -42,6 +42,12 @@ pub enum Event {
         uri: String,
         message: String,
     },
+    /// Library access through the user's own Spotify app. `status` is
+    /// "notConfigured", "setup", "connected" or "error".
+    LibraryAccess {
+        status: String,
+        message: String,
+    },
     /// A command failed without a more specific event to carry the error.
     CommandFailed {
         message: String,
