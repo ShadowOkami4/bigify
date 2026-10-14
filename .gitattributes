@@ -1,0 +1,3 @@
+# Linux-first project: keep LF everywhere (shell scripts run in containers).
+* text=auto eol=lf
+*.png binary

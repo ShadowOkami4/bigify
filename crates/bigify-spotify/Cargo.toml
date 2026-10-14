@@ -1,0 +1,29 @@
+[package]
+name = "bigify-spotify"
+description = "Bigify's Spotify service: librespot session, Connect playback, metadata and Web API access"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+bigify-core.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# Playback, Spotify Connect, metadata and session handling.
+# rustls avoids an OpenSSL runtime dependency (simpler Flatpak/SteamOS story);
+# libmdns is a pure-Rust mDNS responder for "sign in from your phone".
+librespot = { version = "0.8", default-features = false, features = [
+    "pulseaudio-backend",
+    "alsa-backend",
+    "rustls-tls-webpki-roots",
+    "with-libmdns",
+] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
+# Request types for librespot's HTTP client (already in librespot's tree).
+http = "1"
+bytes = "1"
+# Decoding artwork for dynamic color; JPEG/PNG only.
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }

@@ -1,0 +1,14 @@
+[package]
+name = "bigify-core"
+description = "Bigify domain model, playback state, settings and color system (no UI, no network)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+toml = { version = "0.9", default-features = false, features = ["parse", "serde", "display"] }

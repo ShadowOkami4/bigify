@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = ["crates/bigify-core", "crates/bigify-spotify", "crates/bigify-app"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+rust-version = "1.85"
+
+[workspace.dependencies]
+bigify-core = { path = "crates/bigify-core" }
+bigify-spotify = { path = "crates/bigify-spotify" }
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
+strip = "debuginfo"

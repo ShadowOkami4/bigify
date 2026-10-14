@@ -1,0 +1,37 @@
+# DRAFT Flatpak manifest — not yet validated. Remaining work before release:
+#  * generate cargo-sources.json with flatpak-cargo-generator.py (offline build)
+#  * add an app icon and metainfo, and check permissions on SteamOS
+# The app id is a placeholder until the project has a permanent home.
+app-id: io.github.bigify.Bigify
+runtime: org.kde.Platform
+runtime-version: '6.8'
+sdk: org.kde.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: bigify
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Audio output (PipeWire via the PulseAudio protocol)
+  - --socket=pulseaudio
+  # Spotify streaming, plus LAN discovery for phone sign-in
+  - --share=network
+  # Game controllers (evdev)
+  - --device=input
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/bigify/cargo
+modules:
+  - name: bigify
+    buildsystem: simple
+    build-commands:
+      - cargo --offline build --release --locked -p bigify
+      - install -Dm755 target/release/bigify /app/bin/bigify
+      - install -Dm644 packaging/linux/io.github.bigify.Bigify.desktop /app/share/applications/io.github.bigify.Bigify.desktop
+    sources:
+      - type: dir
+        path: ../..
+      - cargo-sources.json

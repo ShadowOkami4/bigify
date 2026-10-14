@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Bigify
+GenericName=Music Player
+Comment=Spotify Connect client for TVs and Steam Deck
+Exec=bigify
+Icon=io.github.bigify.Bigify
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=music;spotify;connect;tv;steam deck;
+StartupNotify=true
