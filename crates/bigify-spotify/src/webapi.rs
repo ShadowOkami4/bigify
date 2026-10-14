@@ -589,6 +589,47 @@ pub fn uri_id(uri: &str) -> Option<&str> {
 // ---------------------------------------------------------------------------
 // HTTP
 
+/// Where Web API access tokens come from (see [`WebApi::token`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TokenSource {
+    Login5,
+    Keymaster,
+}
+
+/// Process-wide preference, so a source that worked is tried first.
+static PREFER_KEYMASTER: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+impl TokenSource {
+    fn preferred() -> Self {
+        if PREFER_KEYMASTER.load(std::sync::atomic::Ordering::Relaxed) {
+            TokenSource::Keymaster
+        } else {
+            TokenSource::Login5
+        }
+    }
+
+    fn set_preferred(source: Self) {
+        PREFER_KEYMASTER.store(
+            source == TokenSource::Keymaster,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+    }
+
+    fn other(self) -> Self {
+        match self {
+            TokenSource::Login5 => TokenSource::Keymaster,
+            TokenSource::Keymaster => TokenSource::Login5,
+        }
+    }
+}
+
+/// Which step of a request failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Stage {
+    Token,
+    Http,
+}
+
 /// Thin client bound to one librespot session.
 #[derive(Clone)]
 pub struct WebApi {
@@ -600,18 +641,68 @@ impl WebApi {
         Self { session }
     }
 
-    async fn token(&self) -> ServiceResult<String> {
-        let token = self
-            .session
-            .token_provider()
-            .get_token(WEB_API_SCOPES)
-            .await
-            .map_err(from_librespot)?;
-        Ok(token.access_token)
+    /// Obtain an access token from `source`.
+    ///
+    /// * `Login5`: the token librespot itself uses for Spotify's HTTP APIs,
+    ///   minted from the session's stored credentials.
+    /// * `Keymaster`: the older Mercury `hm://keymaster` endpoint, which
+    ///   Spotify is phasing out; kept as a fallback.
+    async fn token(&self, source: TokenSource) -> ServiceResult<String> {
+        let result = match source {
+            TokenSource::Login5 => self.session.login5().auth_token().await,
+            TokenSource::Keymaster => {
+                self.session
+                    .token_provider()
+                    .get_token(WEB_API_SCOPES)
+                    .await
+            }
+        };
+        result.map(|t| t.access_token).map_err(|e| {
+            // The error text never contains the token itself.
+            log::warn!("Web API token via {source:?} failed: {e}");
+            ServiceError::new(
+                ErrorKind::Network,
+                "Couldn't get access to your Spotify library. Playback still works; try again later.",
+            )
+        })
     }
 
     async fn request(&self, method: http::Method, path_and_query: &str) -> ServiceResult<Bytes> {
-        let token = self.token().await?;
+        let preferred = TokenSource::preferred();
+        let first = self
+            .request_with(preferred, method.clone(), path_and_query)
+            .await;
+        match first {
+            // Token unavailable or rejected: try the other source once and
+            // remember it if it works.
+            Err((stage, e))
+                if stage == Stage::Token
+                    || matches!(e.kind, ErrorKind::Unauthorized | ErrorKind::Unsupported) =>
+            {
+                let other = preferred.other();
+                match self.request_with(other, method, path_and_query).await {
+                    Ok(body) => {
+                        log::info!("Web API: using {other:?} tokens");
+                        TokenSource::set_preferred(other);
+                        Ok(body)
+                    }
+                    // Report the first error unless the retry got further.
+                    Err((Stage::Http, e2)) => Err(e2),
+                    Err(_) => Err(e),
+                }
+            }
+            Err((_, e)) => Err(e),
+            Ok(body) => Ok(body),
+        }
+    }
+
+    async fn request_with(
+        &self,
+        source: TokenSource,
+        method: http::Method,
+        path_and_query: &str,
+    ) -> Result<Bytes, (Stage, ServiceError)> {
+        let token = self.token(source).await.map_err(|e| (Stage::Token, e))?;
         let req = http::Request::builder()
             .method(method)
             .uri(format!("{API}{path_and_query}"))
@@ -619,13 +710,23 @@ impl WebApi {
             .header(http::header::ACCEPT, "application/json")
             .header(http::header::CONTENT_LENGTH, "0")
             .body(Bytes::new())
-            .map_err(|e| ServiceError::internal(format!("Invalid request ({e})")))?;
+            .map_err(|e| {
+                (
+                    Stage::Http,
+                    ServiceError::internal(format!("Invalid request ({e})")),
+                )
+            })?;
         // librespot's client already honours 429 Retry-After.
         self.session
             .http_client()
             .request_body(req)
             .await
-            .map_err(from_librespot)
+            .map_err(|e| {
+                // Log the endpoint without its query (search terms are personal).
+                let path = path_and_query.split('?').next().unwrap_or("");
+                log::warn!("Web API {path} failed: {e}");
+                (Stage::Http, from_librespot(e))
+            })
     }
 
     pub async fn get(&self, path_and_query: &str) -> ServiceResult<Bytes> {

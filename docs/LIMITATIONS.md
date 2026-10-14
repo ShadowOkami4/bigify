@@ -10,7 +10,7 @@ Spotify's February 2026 Web API changes.
 | Interface | Used for | Auth |
 |---|---|---|
 | **librespot 0.8** (Rust crate, linked in) | Session, Spotify Connect receiver, audio playback, player events, track/playlist metadata | OAuth (browser) or Spotify Connect discovery (phone); reusable credentials cached locally |
-| **Spotify Web API** | Home shelves, search, library listings, queue view, add-to-queue | Access token minted by the librespot session (`TokenProvider`), i.e. Spotify's own desktop client ID |
+| **Spotify Web API** | Home shelves, search, library listings, queue view, add-to-queue | Access token from the librespot session: login5 first, the older Mercury keymaster endpoint as fallback (Spotify is phasing keymaster out) |
 
 ### Why the session token for the Web API
 
