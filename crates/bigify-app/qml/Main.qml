@@ -53,8 +53,8 @@ Window {
             { id: "home", label: qsTr("Home"), icon: "home" },
             { id: "search", label: qsTr("Search"), icon: "search" },
             { id: "library", label: qsTr("Library"), icon: "library" },
-            { id: "nowPlaying", label: qsTr("Playing"), icon: "nowPlaying", overlay: true },
-            { id: "settings", label: qsTr("Settings"), icon: "settings" }
+            { id: "nowPlaying", label: qsTr("Playing"), icon: "nowPlaying", overlay: true, bottom: true },
+            { id: "settings", label: qsTr("Settings"), icon: "settings", bottom: true }
         ]
 
         readonly property bool showSignIn: !Backend.designPreview && Backend.authState !== "connected"
@@ -342,6 +342,13 @@ Window {
             }
         }
 
+        // ---- Keyboard equivalents of controller shortcuts (CONTROLS.md) ----
+        Shortcut { sequence: "Ctrl+P"; enabled: !app.showSignIn; onActivated: Backend.togglePlay() }
+        Shortcut { sequence: "Ctrl+Right"; enabled: !app.showSignIn; onActivated: Backend.next() }
+        Shortcut { sequence: "Ctrl+Left"; enabled: !app.showSignIn; onActivated: Backend.previous() }
+        Shortcut { sequence: "Ctrl+Up"; autoRepeat: true; enabled: !app.showSignIn; onActivated: Backend.stepVolume(0.05) }
+        Shortcut { sequence: "Ctrl+Down"; autoRepeat: true; enabled: !app.showSignIn; onActivated: Backend.stepVolume(-0.05) }
+
         // ---- Backend wiring ------------------------------------------------
         Connections {
             target: SavedState
@@ -393,6 +400,8 @@ Window {
                 Backend.positionSampledAt = Date.now()
                 Backend.repeatMode = "context"
                 Backend.volume = 0.62
+                if (window.dev.inputMode) Backend.inputMode = window.dev.inputMode
+                if (window.dev.controller) Backend.controllerFamily = window.dev.controller
                 app.everConnected = true
                 home.reload()
                 library.reload()

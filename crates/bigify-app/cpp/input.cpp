@@ -3,9 +3,15 @@
 
 #include <QGuiApplication>
 #include <QKeyEvent>
+#include <QMouseEvent>
+#include <QPointer>
 #include <QWindow>
 
 namespace {
+
+// Marks key events synthesised from controller input, so the input-mode
+// filter can tell them apart from a physical keyboard.
+constexpr quint32 kGamepadScanCode = 0xB16F;
 
 // Keep in sync with `Action` in src/input.rs and docs/CONTROLS.md.
 int keyForAction(std::int32_t action)
@@ -28,6 +34,65 @@ int keyForAction(std::int32_t action)
     default: return 0;
     }
 }
+
+class InputModeFilter : public QObject
+{
+public:
+    explicit InputModeFilter(QObject *target)
+        : QObject(target)
+        , m_target(target)
+    {
+    }
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        // Only look at events delivered to windows; Qt forwards the same
+        // event to items afterwards, so this sees each input once.
+        if (!watched->isWindowType())
+            return false;
+        switch (event->type()) {
+        case QEvent::KeyPress: {
+            const auto *key = static_cast<QKeyEvent *>(event);
+            setMode(key->nativeScanCode() == kGamepadScanCode ? "gamepad" : "keyboard");
+            break;
+        }
+        case QEvent::MouseButtonPress:
+        case QEvent::Wheel:
+        case QEvent::TouchBegin:
+            setMode("keyboard");
+            break;
+        case QEvent::MouseMove: {
+            // Ignore tiny or synthetic moves (e.g. content scrolling under a
+            // resting cursor); require a deliberate movement.
+            const auto *mouse = static_cast<QMouseEvent *>(event);
+            const QPointF pos = mouse->globalPosition();
+            if (m_hasLastPos && (pos - m_lastPos).manhattanLength() > 12.0)
+                setMode("keyboard");
+            m_lastPos = pos;
+            m_hasLastPos = true;
+            break;
+        }
+        default:
+            break;
+        }
+        return false;
+    }
+
+private:
+    void setMode(const char *mode)
+    {
+        if (m_mode == mode || !m_target)
+            return;
+        m_mode = mode;
+        m_target->setProperty("inputMode", QString::fromLatin1(mode));
+    }
+
+    QPointer<QObject> m_target;
+    const char *m_mode = nullptr;
+    QPointF m_lastPos;
+    bool m_hasLastPos = false;
+};
 
 } // namespace
 
@@ -52,5 +117,11 @@ void bigifyPostAction(std::int32_t action, bool pressed, bool autorepeat)
     QGuiApplication::postEvent(
         window,
         new QKeyEvent(pressed ? QEvent::KeyPress : QEvent::KeyRelease, key, Qt::NoModifier,
-                      QString(), autorepeat));
+                      kGamepadScanCode, 0, 0, QString(), autorepeat));
+}
+
+void bigifyInstallInputModeFilter(QObject &target)
+{
+    if (auto *app = QGuiApplication::instance())
+        app->installEventFilter(new InputModeFilter(&target));
 }

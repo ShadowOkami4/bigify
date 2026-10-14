@@ -10,15 +10,19 @@ naming; PlayStation and Steam Deck buttons map by position.
 | D-pad / left stick | Move focus (repeats while held) | Arrow keys |
 | A | Select / activate | Enter, Space |
 | B | Back | Esc |
-| X | Play / pause (anywhere) | Media Play/Pause |
-| Y | More: add the focused track to the queue | Menu key |
-| LB / RB | Previous / next track | Media Previous / Next |
-| LT / RT | Volume down / up | Volume keys |
+| X | Play / pause (anywhere) | Ctrl+P, Media Play/Pause |
+| Y | More: add the focused track to the queue | Q, Menu key |
+| LB / RB | Previous / next track | Ctrl+← / Ctrl+→, Media Previous / Next |
+| LT / RT | Volume down / up | Ctrl+↓ / Ctrl+↑, Volume keys |
 | Start (☰) | Open / close Now Playing | F2 |
 | Select / View (⧉) | Open / close Up next (queue) | F3 |
 | Guide / Steam | Not used; left to the system | — |
 
 The mouse works everywhere (click to select) but is never required.
+
+**On-screen hints follow your input.** After controller input Bigify shows
+controller buttons (Steam Deck, Xbox, PlayStation or Nintendo labels,
+detected from the controller), after keyboard or mouse input it shows keys.
 
 Media keys on keyboards, Bluetooth headsets and desktop media widgets work
 through MPRIS (`org.mpris.MediaPlayer2.Bigify`). Try it with
@@ -37,6 +41,9 @@ through MPRIS (`org.mpris.MediaPlayer2.Bigify`). Try it with
 
 ## Navigation model
 
+- **Rail layout.** Home, Search and Library sit at the top under the logo;
+  Playing and Settings are pinned to the bottom. Up/Down move through all
+  of them in order.
 - **Rail → content.** Moving focus over Home, Search, Library or Settings
   switches the section immediately, as on a TV. **Right** or **A** moves
   into the content. "Playing" opens only on Right/A.

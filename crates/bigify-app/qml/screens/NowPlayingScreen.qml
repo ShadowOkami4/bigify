@@ -191,13 +191,11 @@ FocusScope {
                         font.pixelSize: Theme.type.labelLarge
                         font.features: { "tnum": 1 }
                     }
-                    Text {
+                    ButtonHint {
                         anchors.horizontalCenter: parent.horizontalCenter
                         visible: progress.activeFocus
-                        text: root.isPending("seek") ? qsTr("Seeking…") : qsTr("◀ ▶  Seek 10 s")
-                        color: Theme.surfaceContentVariant
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.type.labelSmall
+                        action: "seek"
+                        label: root.isPending("seek") ? qsTr("Seeking…") : qsTr("Seek 10 s")
                     }
                     Text {
                         anchors.right: parent.right
@@ -352,13 +350,15 @@ FocusScope {
         }
     }
 
-    // Controller hint bar
-    Text {
-        anchors { bottom: parent.bottom; bottomMargin: Theme.dp(24); horizontalCenter: parent.horizontalCenter }
+    // Button hints (controller glyphs or keyboard keys, whichever is in use)
+    Row {
+        anchors { bottom: parent.bottom; bottomMargin: Theme.dp(22); horizontalCenter: parent.horizontalCenter }
         visible: root.hasTrack
-        text: qsTr("X Play/Pause   ·   LB/RB Previous/Next   ·   LT/RT Volume   ·   Select Up next   ·   B Back")
-        color: Theme.alpha(Theme.surfaceContentVariant, 0.8)
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.type.labelSmall
+        spacing: Theme.space.xxl
+        ButtonHint { action: "playPause"; label: qsTr("Play/Pause") }
+        ButtonHint { action: "prevNext"; label: qsTr("Previous/Next") }
+        ButtonHint { action: "volume"; label: qsTr("Volume") }
+        ButtonHint { action: "upNext"; label: qsTr("Up next") }
+        ButtonHint { action: "back"; label: qsTr("Back") }
     }
 }

@@ -20,17 +20,6 @@ Item {
         border.width: root.activeFocus ? 0 : Math.max(1, Theme.dp(1))
         border.color: Theme.outlineVariant
         FocusRing { shown: root.activeFocus; radius: bg.radius }
-        clip: true
-
-        // Confirmed position only; extrapolated locally while playing.
-        Rectangle {
-            anchors { left: parent.left; bottom: parent.bottom }
-            height: Theme.dp(6)
-            radius: height / 2
-            visible: Backend.durationMs > 0
-            width: parent.width * clock.fraction
-            color: Theme.primary
-        }
     }
 
     PositionClock { id: clock; active: root.visible }
@@ -48,7 +37,7 @@ Item {
     Column {
         anchors {
             left: art.right; leftMargin: Theme.space.xl
-            right: controls.left; rightMargin: Theme.space.xl
+            right: controls.left; rightMargin: Theme.space.xxl
             verticalCenter: parent.verticalCenter
         }
         spacing: Theme.space.xs
@@ -68,6 +57,46 @@ Item {
             font.family: Theme.fontFamily
             font.pixelSize: Theme.type.labelLarge
             elide: Text.ElideRight
+        }
+        // Linear progress (confirmed position, extrapolated while playing).
+        // Hidden when the engine reported no duration.
+        Row {
+            visible: Backend.durationMs > 0
+            width: parent.width
+            spacing: Theme.space.m
+            topPadding: Theme.space.xs
+            Text {
+                id: elapsed
+                anchors.verticalCenter: parent.verticalCenter
+                text: clock.format(clock.position)
+                color: Theme.surfaceContentVariant
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.type.labelSmall
+                font.features: { "tnum": 1 }
+            }
+            Rectangle {
+                id: track
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - elapsed.width - total.width - parent.spacing * 2
+                height: Theme.dp(6)
+                radius: height / 2
+                color: Theme.alpha(Theme.surfaceContent, 0.18)
+                Rectangle {
+                    height: parent.height
+                    radius: parent.radius
+                    width: Math.max(height, parent.width * clock.fraction)
+                    color: Theme.primary
+                }
+            }
+            Text {
+                id: total
+                anchors.verticalCenter: parent.verticalCenter
+                text: clock.format(Backend.durationMs)
+                color: Theme.surfaceContentVariant
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.type.labelSmall
+                font.features: { "tnum": 1 }
+            }
         }
     }
 
@@ -97,13 +126,12 @@ Item {
                 visible: /\b(play|pause|load|next|previous)\b/.test(Backend.pending)
             }
         }
-        Text {
+        Row {
             anchors.verticalCenter: parent.verticalCenter
             visible: root.activeFocus
-            text: qsTr("A  Open  ·  X  Play/Pause")
-            color: Theme.surfaceContentVariant
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.type.labelSmall
+            spacing: Theme.space.l
+            ButtonHint { action: "select"; label: qsTr("Open") }
+            ButtonHint { action: "playPause"; label: qsTr("Play/Pause") }
         }
     }
 

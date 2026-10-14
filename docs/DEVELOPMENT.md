@@ -117,6 +117,7 @@ Images are written to `screenshots/`, which git ignores.
 | `BIGIFY_START_SCREEN` | Open a given screen at start |
 | `BIGIFY_WINDOW_SIZE=WxH` | Windowed at a fixed size (testing) |
 | `BIGIFY_SCREENSHOT=path.png` | Capture after 3.5 s and quit |
+| `BIGIFY_INPUT_MODE=gamepad` / `BIGIFY_CONTROLLER=deck\|xbox\|playstation\|nintendo` | Design preview only: show controller hints for screenshots |
 
 ## Files at runtime
 

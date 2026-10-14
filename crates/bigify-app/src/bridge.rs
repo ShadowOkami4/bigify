@@ -36,6 +36,10 @@ pub mod qobject {
         include!("bigify/cpp/input.h");
         #[cxx_name = "bigifyPostAction"]
         fn post_action(action: i32, pressed: bool, autorepeat: bool);
+
+        // `QObject` is declared implicitly by every cxx-qt bridge.
+        #[cxx_name = "bigifyInstallInputModeFilter"]
+        fn install_input_mode_filter(target: Pin<&mut QObject>);
     }
 
     #[auto_cxx_name]
@@ -78,6 +82,12 @@ pub mod qobject {
         /// Developer options from the environment (screenshot path, start
         /// screen, window size) as JSON. See docs/DEVELOPMENT.md.
         #[qproperty(QString, dev_json, cxx_name = "devJson")]
+        /// "gamepad" or "keyboard" (keyboard, mouse, touch): which button
+        /// hints to show. Kept current by the C++ input-mode filter.
+        #[qproperty(QString, input_mode, cxx_name = "inputMode")]
+        /// Button-label family of the controller in use: "deck", "xbox",
+        /// "playstation" or "nintendo".
+        #[qproperty(QString, controller_family, cxx_name = "controllerFamily")]
         type Backend = super::BackendRust;
 
         #[qinvokable]
@@ -287,6 +297,8 @@ pub struct BackendRust {
     log_file_path: QString,
     design_preview: bool,
     dev_json: QString,
+    input_mode: QString,
+    controller_family: QString,
 
     playback: PlaybackState,
     settings: Settings,
@@ -326,6 +338,8 @@ impl Default for BackendRust {
             log_file_path: QString::from(paths::log_file().to_string_lossy().as_ref()),
             design_preview: false,
             dev_json: QString::from("{}"),
+            input_mode: QString::from("keyboard"),
+            controller_family: QString::from("xbox"),
             playback: PlaybackState::new(),
             settings: Settings::default(),
             epoch: Instant::now(),
@@ -356,7 +370,15 @@ impl cxx_qt::Initialize for qobject::Backend {
             "screenshot": env("BIGIFY_SCREENSHOT"),
             "startScreen": env("BIGIFY_START_SCREEN"),
             "windowSize": env("BIGIFY_WINDOW_SIZE"),
+            "inputMode": env("BIGIFY_INPUT_MODE"),
+            "controller": env("BIGIFY_CONTROLLER"),
         })));
+
+        {
+            use cxx_qt::casting::Upcast;
+            let obj: Pin<&mut cxx_qt::QObject> = self.as_mut().upcast_pin();
+            qobject::install_input_mode_filter(obj);
+        }
 
         let input_stop = Arc::new(AtomicBool::new(false));
         let input_enabled = Arc::new(AtomicBool::new(settings.controller_input));
@@ -411,16 +433,27 @@ fn start_input(
     enabled: Arc<AtomicBool>,
 ) -> Option<JoinHandle<()>> {
     let qt = backend.qt_thread();
+    let qt_family = backend.qt_thread();
     std::thread::Builder::new()
         .name("bigify-input".into())
         .spawn(move || {
-            crate::input::gamepad::run(stop, enabled, move |events| {
-                let _ = qt.queue(move |_| {
-                    for e in events {
-                        qobject::post_action(e.action as i32, e.pressed, e.autorepeat);
-                    }
-                });
-            })
+            crate::input::gamepad::run(
+                stop,
+                enabled,
+                move |events| {
+                    let _ = qt.queue(move |_| {
+                        for e in events {
+                            qobject::post_action(e.action as i32, e.pressed, e.autorepeat);
+                        }
+                    });
+                },
+                move |family| {
+                    let _ = qt_family.queue(move |mut obj| {
+                        obj.as_mut().set_controller_family(QString::from(family));
+                        obj.as_mut().set_input_mode(QString::from("gamepad"));
+                    });
+                },
+            )
         })
         .map_err(|e| log::warn!("could not start controller thread: {e}"))
         .ok()

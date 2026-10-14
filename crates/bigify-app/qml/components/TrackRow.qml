@@ -115,13 +115,11 @@ Item {
         id: trail
         anchors { right: parent.right; rightMargin: Theme.space.xl; verticalCenter: parent.verticalCenter }
         spacing: Theme.space.xl
-        Text {
+        ButtonHint {
             visible: root.activeFocus && root.showQueueAction
             anchors.verticalCenter: parent.verticalCenter
-            text: qsTr("Y  Add to queue")
-            color: Theme.surfaceContentVariant
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.type.labelSmall
+            action: "more"
+            label: qsTr("Add to queue")
         }
         Text {
             anchors.verticalCenter: parent.verticalCenter
@@ -136,7 +134,9 @@ Item {
     Keys.onReturnPressed: root.activated()
     Keys.onEnterPressed: root.activated()
     Keys.onPressed: event => {
-        if (event.key === Qt.Key_Menu && root.showQueueAction && root.item.uri) {
+        const more = event.key === Qt.Key_Menu
+            || (event.key === Qt.Key_Q && event.modifiers === Qt.NoModifier)
+        if (more && root.showQueueAction && root.item.uri) {
             Backend.addToQueue(root.item.uri)
             event.accepted = true
         }

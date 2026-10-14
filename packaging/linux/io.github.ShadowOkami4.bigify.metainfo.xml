@@ -52,6 +52,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.1.1" date="2026-10-14">
+      <description>
+        <p>Fixes library, playlists and search failing with "can't reach Spotify"; on-screen hints now match your controller or keyboard; navigation rail with logo and Playing/Settings at the bottom; cleaner progress bar in the mini player.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-14">
       <description>
         <p>First preview release.</p>

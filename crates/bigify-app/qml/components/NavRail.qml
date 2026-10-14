@@ -1,17 +1,37 @@
 import QtQuick
 import Bigify
 
-// Navigation rail. Moving focus between destinations switches the visible
-// section immediately (TV convention); Right or A enters the content.
-// Destinations with `overlay: true` (Now Playing) open only on Right/A.
+// Navigation rail. Main destinations sit at the top under the logo;
+// destinations marked `bottom: true` (Playing, Settings) are pinned to the
+// bottom edge. Up/Down move through all of them in order.
+//
+// Moving focus between destinations switches the visible section
+// immediately (TV convention); Right or A enters the content. Destinations
+// with `overlay: true` (Now Playing) open only on Right/A.
 FocusScope {
     id: root
-    property var destinations: []          // [{ id, label, icon }]
+    property var destinations: []          // [{ id, label, icon, overlay?, bottom? }]
     property string current: "home"
     signal navigate(string id)
     signal enterContent(string id)
 
     width: Theme.size.navRail
+
+    property int currentIndex: Math.max(0, destinations.findIndex(d => d.id === current))
+    readonly property int bottomCount: destinations.filter(d => d.bottom).length
+    readonly property int itemStep: Theme.size.navItem + Theme.space.l
+
+    // Follow section changes made elsewhere (e.g. Back to Home) unless the
+    // user is currently moving through the rail.
+    onCurrentChanged: if (!activeFocus) currentIndex = Math.max(0, destinations.findIndex(d => d.id === current))
+
+    function moveFocus(step) {
+        const next = currentIndex + step
+        if (next < 0 || next >= destinations.length) return
+        currentIndex = next
+        const d = destinations[next]
+        if (!d.overlay) root.navigate(d.id)
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -19,40 +39,30 @@ FocusScope {
         Behavior on color { ColorAnimation { duration: Theme.motion.fade } }
     }
 
-    // Wordmark
-    Text {
-        id: mark
-        anchors { top: parent.top; topMargin: Theme.safeV; horizontalCenter: parent.horizontalCenter }
-        text: "B"
-        color: Theme.primary
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.type.displaySmall
-        font.weight: Font.Black
-        Accessible.ignored: true
+    LogoMark {
+        id: logo
+        anchors { top: parent.top; topMargin: Theme.safeV - Theme.dp(8); horizontalCenter: parent.horizontalCenter }
+        size: Theme.dp(64)
     }
 
-    ListView {
-        id: list
-        anchors { top: mark.bottom; topMargin: Theme.space.xxxl; bottom: parent.bottom; left: parent.left; right: parent.right }
-        spacing: Theme.space.l
-        focus: true
-        interactive: false
-        keyNavigationEnabled: true
+    Repeater {
         model: root.destinations
-        currentIndex: Math.max(0, root.destinations.findIndex(d => d.id === root.current))
-        onCurrentIndexChanged: {
-            const d = root.destinations[currentIndex]
-            if (activeFocus && d && !d.overlay) root.navigate(d.id)
-        }
 
         delegate: Item {
             id: navItem
             required property var modelData
             required property int index
             readonly property bool selected: root.current === modelData.id
-            width: list.width
+            // Position within the top or bottom group.
+            readonly property int groupIndex: root.destinations.slice(0, index)
+                .filter(d => !!d.bottom === !!modelData.bottom).length
+
+            width: root.width
             height: Theme.size.navItem
-            focus: ListView.isCurrentItem
+            y: modelData.bottom
+               ? root.height - Theme.safeV - (root.bottomCount - groupIndex) * root.itemStep + Theme.space.l
+               : logo.y + logo.height + Theme.space.xxxl + groupIndex * root.itemStep
+            focus: index === root.currentIndex
             activeFocusOnTab: true
             Accessible.role: Accessible.PageTab
             Accessible.name: modelData.label
@@ -86,14 +96,21 @@ FocusScope {
                 font.weight: navItem.selected ? Font.Bold : Font.Medium
             }
 
-            Keys.onReturnPressed: root.enterContent(modelData.id)
-            Keys.onEnterPressed: root.enterContent(modelData.id)
             MouseArea {
                 anchors.fill: parent
-                onClicked: { list.currentIndex = navItem.index; root.navigate(navItem.modelData.id); root.enterContent(navItem.modelData.id) }
+                onClicked: {
+                    root.currentIndex = navItem.index
+                    navItem.forceActiveFocus()
+                    if (!navItem.modelData.overlay) root.navigate(navItem.modelData.id)
+                    root.enterContent(navItem.modelData.id)
+                }
             }
         }
     }
 
-    Keys.onRightPressed: if (destinations[list.currentIndex]) root.enterContent(destinations[list.currentIndex].id)
+    Keys.onUpPressed: moveFocus(-1)
+    Keys.onDownPressed: moveFocus(1)
+    Keys.onRightPressed: if (destinations[currentIndex]) root.enterContent(destinations[currentIndex].id)
+    Keys.onReturnPressed: if (destinations[currentIndex]) root.enterContent(destinations[currentIndex].id)
+    Keys.onEnterPressed: if (destinations[currentIndex]) root.enterContent(destinations[currentIndex].id)
 }

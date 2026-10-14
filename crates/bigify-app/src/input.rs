@@ -175,6 +175,41 @@ fn is_direction(a: Action) -> bool {
     matches!(a, Action::Up | Action::Down | Action::Left | Action::Right)
 }
 
+/// Button-label family for on-screen hints: "deck", "xbox", "playstation"
+/// or "nintendo". `on_steam_deck` matters because Steam Input in Gaming
+/// Mode presents the Deck's controls as a virtual Xbox controller.
+pub fn controller_family(name: &str, on_steam_deck: bool) -> &'static str {
+    let n = name.to_ascii_lowercase();
+    if [
+        "dualsense",
+        "dualshock",
+        "playstation",
+        "sony",
+        "ps4",
+        "ps5",
+    ]
+    .iter()
+    .any(|k| n.contains(k))
+    {
+        "playstation"
+    } else if n.contains("nintendo") || n.contains("switch") || n.contains("joy-con") {
+        "nintendo"
+    } else if n.contains("steam deck")
+        || (on_steam_deck && (n.contains("steam") || n.contains("x-box") || n.contains("xbox")))
+    {
+        "deck"
+    } else {
+        "xbox"
+    }
+}
+
+/// Steam Deck LCD ("Jupiter") or OLED ("Galileo"), from DMI.
+pub fn is_steam_deck() -> bool {
+    std::fs::read_to_string("/sys/devices/virtual/dmi/id/product_name")
+        .map(|p| matches!(p.trim(), "Jupiter" | "Galileo"))
+        .unwrap_or(false)
+}
+
 #[cfg(feature = "gamepad")]
 pub mod gamepad {
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -183,7 +218,7 @@ pub mod gamepad {
 
     use gilrs::{Axis, Button, EventType, Gilrs};
 
-    use super::{Action, InputState, KeyEvent};
+    use super::{controller_family, is_steam_deck, Action, InputState, KeyEvent};
 
     fn map_button(b: Button) -> Option<Action> {
         Some(match b {
@@ -209,7 +244,14 @@ pub mod gamepad {
     /// Run the controller loop until `stop` is set. `deliver` is called with
     /// batches of key events and must be cheap (it queues onto the Qt thread).
     /// `enabled` lets the user turn controller input off at runtime.
-    pub fn run(stop: Arc<AtomicBool>, enabled: Arc<AtomicBool>, deliver: impl Fn(Vec<KeyEvent>)) {
+    /// `on_controller` reports the button-label family of the controller in
+    /// use (at start, on connect, and when a different controller is used).
+    pub fn run(
+        stop: Arc<AtomicBool>,
+        enabled: Arc<AtomicBool>,
+        deliver: impl Fn(Vec<KeyEvent>),
+        on_controller: impl Fn(&'static str),
+    ) {
         let mut gilrs = match Gilrs::new() {
             Ok(g) => g,
             Err(e) => {
@@ -217,8 +259,15 @@ pub mod gamepad {
                 return;
             }
         };
+        let deck = is_steam_deck();
+        let mut family: Option<&'static str> = None;
         for (_, pad) in gilrs.gamepads() {
             log::info!("controller connected: {}", pad.name());
+            if family.is_none() {
+                let f = controller_family(pad.name(), deck);
+                family = Some(f);
+                on_controller(f);
+            }
         }
         let mut state = InputState::default();
         let mut wait = Duration::from_millis(250);
@@ -231,6 +280,11 @@ pub mod gamepad {
                 if enabled.load(Ordering::Relaxed) {
                     match ev.event {
                         EventType::ButtonPressed(b, _) => {
+                            let f = controller_family(gilrs.gamepad(ev.id).name(), deck);
+                            if family != Some(f) {
+                                family = Some(f);
+                                on_controller(f);
+                            }
                             if let Some(a) = map_button(b) {
                                 state.press(a, now, &mut out);
                             }
@@ -248,7 +302,11 @@ pub mod gamepad {
                             state.axis(true, v, Action::Up, Action::Down, now, &mut out)
                         }
                         EventType::Connected => {
-                            log::info!("controller connected: {}", gilrs.gamepad(ev.id).name())
+                            let name = gilrs.gamepad(ev.id).name().to_owned();
+                            log::info!("controller connected: {name}");
+                            let f = controller_family(&name, deck);
+                            family = Some(f);
+                            on_controller(f);
                         }
                         EventType::Disconnected => {
                             log::info!("controller disconnected");
@@ -308,6 +366,24 @@ mod tests {
         let releases: Vec<_> = out.iter().filter(|e| !e.pressed).collect();
         assert_eq!(releases.len(), 1);
         assert_eq!(releases[0].action, Action::Left);
+    }
+
+    #[test]
+    fn controller_families() {
+        let ps = "Sony Interactive Entertainment DualSense Wireless Controller";
+        assert_eq!(controller_family(ps, false), "playstation");
+        assert_eq!(
+            controller_family("Microsoft X-Box 360 pad 0", false),
+            "xbox"
+        );
+        assert_eq!(controller_family("Microsoft X-Box 360 pad 0", true), "deck");
+        assert_eq!(controller_family("Steam Virtual Gamepad", true), "deck");
+        assert_eq!(controller_family("Steam Deck", false), "deck");
+        assert_eq!(
+            controller_family("Nintendo Switch Pro Controller", false),
+            "nintendo"
+        );
+        assert_eq!(controller_family("8BitDo SN30 Pro", false), "xbox");
     }
 
     #[test]

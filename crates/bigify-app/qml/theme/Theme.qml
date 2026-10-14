@@ -209,7 +209,7 @@ Item {
         icon: theme.dp(32),
         iconLarge: theme.dp(44),
         trackRow: theme.dp(96),
-        miniPlayer: theme.dp(120),
+        miniPlayer: theme.dp(136),
         nowPlayingArt: theme.dp(620)
     })
 }

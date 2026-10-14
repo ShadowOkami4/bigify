@@ -290,7 +290,7 @@ checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
 name = "bigify"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bigify-core",
  "bigify-spotify",
@@ -309,7 +309,7 @@ dependencies = [
 
 [[package]]
 name = "bigify-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "log",
  "serde",
@@ -320,7 +320,7 @@ dependencies = [
 
 [[package]]
 name = "bigify-spotify"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bigify-core",
  "bytes",

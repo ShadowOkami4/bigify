@@ -58,14 +58,19 @@ FocusScope {
             font.pixelSize: Theme.type.headlineLarge
             font.weight: Theme.weightDisplay
         }
-        Text {
+        Column {
             id: note
             anchors { top: header.bottom; topMargin: Theme.space.s; left: header.left; right: parent.right; rightMargin: Theme.space.xxxl }
-            text: qsTr("Add songs with Y from any track list. Reordering isn't available through Spotify's public interfaces.")
-            wrapMode: Text.WordWrap
-            color: Theme.surfaceContentVariant
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.type.labelMedium
+            spacing: Theme.space.s
+            ButtonHint { action: "more"; label: qsTr("on any song adds it here") }
+            Text {
+                width: parent.width
+                text: qsTr("Reordering isn't available through Spotify's public interfaces.")
+                wrapMode: Text.WordWrap
+                color: Theme.surfaceContentVariant
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.type.labelMedium
+            }
         }
 
         StatePanel {
