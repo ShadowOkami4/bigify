@@ -40,6 +40,7 @@ FocusScope {
 
     Component.onCompleted: load()
     onItemChanged: load()
+    onShownChanged: if (shown && shown.uri) SavedState.check([shown.uri])
 
     Connections {
         target: Backend
@@ -119,11 +120,17 @@ FocusScope {
                         Row {
                             spacing: Theme.space.l
                             PillButton {
+                                id: artistPlay
                                 focus: true
                                 text: qsTr("Play")
                                 icon: "play"
                                 busy: /\bload\b/.test(Backend.pending)
                                 onClicked: Backend.playUri(root.shown.uri, "")
+                                KeyNavigation.right: followButton
+                            }
+                            SaveButton {
+                                id: followButton
+                                uri: root.shown.uri || ""
                             }
                             LoadingIndicator {
                                 visible: root.status === "loading"

@@ -25,7 +25,8 @@ const API: &str = "https://api.spotify.com/v1";
 /// Scopes requested for Web API tokens.
 pub const WEB_API_SCOPES: &str = "user-read-private,user-library-read,user-library-modify,\
 user-read-recently-played,user-top-read,user-follow-read,playlist-read-private,\
-playlist-read-collaborative,user-read-playback-state,user-modify-playback-state";
+playlist-read-collaborative,user-read-playback-state,user-modify-playback-state,\
+user-follow-modify,playlist-modify-public,playlist-modify-private";
 
 /// Spotify's maximum page size for library endpoints.
 pub const PAGE_SIZE: u32 = 50;
@@ -556,6 +557,29 @@ pub fn encode(s: &str) -> String {
     out
 }
 
+/// Maximum URIs per `/me/library` request.
+pub const LIBRARY_BATCH: usize = 40;
+
+/// Kinds that can be saved or followed.
+pub fn library_kind(uri: &str) -> Option<MediaKind> {
+    MediaKind::from_uri(uri).filter(|k| {
+        matches!(
+            k,
+            MediaKind::Track
+                | MediaKind::Album
+                | MediaKind::Artist
+                | MediaKind::Playlist
+                | MediaKind::Episode
+                | MediaKind::Show
+        )
+    })
+}
+
+/// Errors after which the legacy type-specific endpoint is worth trying.
+fn is_fallback(e: &ServiceError) -> bool {
+    matches!(e.kind, ErrorKind::NotFound | ErrorKind::Unsupported)
+}
+
 /// Extract the base62 id from `spotify:<type>:<id>`.
 pub fn uri_id(uri: &str) -> Option<&str> {
     let id = uri.rsplit(':').next()?;
@@ -616,6 +640,10 @@ impl WebApi {
         self.request(http::Method::POST, path_and_query)
             .await
             .map(|_| ())
+    }
+
+    async fn send(&self, method: http::Method, path_and_query: &str) -> ServiceResult<()> {
+        self.request(method, path_and_query).await.map(|_| ())
     }
 
     // -- Endpoints -----------------------------------------------------------
@@ -706,6 +734,95 @@ impl WebApi {
             ))
             .await?;
         parse_artist_albums(&body)
+    }
+
+    /// Whether each URI is saved (followed, for artists).
+    ///
+    /// Uses the generic `/me/library/contains` endpoint introduced in
+    /// February 2026 and falls back to the type-specific endpoints when it
+    /// is unavailable to this token. Artists always use `/me/following`.
+    pub async fn contains(&self, uris: &[String]) -> ServiceResult<Vec<(String, bool)>> {
+        let mut out = Vec::new();
+        let (artists, others): (Vec<&String>, Vec<&String>) = uris
+            .iter()
+            .filter(|u| library_kind(u).is_some())
+            .partition(|u| library_kind(u) == Some(MediaKind::Artist));
+
+        for chunk in others.chunks(LIBRARY_BATCH) {
+            let joined: Vec<&str> = chunk.iter().map(|s| s.as_str()).collect();
+            let generic: ServiceResult<Vec<bool>> = match self
+                .get(&format!(
+                    "/me/library/contains?uris={}",
+                    encode(&joined.join(","))
+                ))
+                .await
+            {
+                Ok(body) => parse(&body),
+                Err(e) => Err(e),
+            };
+            match generic {
+                Ok(flags) if flags.len() == chunk.len() => {
+                    out.extend(chunk.iter().map(|u| (*u).clone()).zip(flags));
+                }
+                Ok(_) => return Err(ServiceError::internal("Unexpected library response")),
+                Err(e) if is_fallback(&e) => {
+                    for uri in chunk {
+                        out.push(((*uri).clone(), self.contains_legacy(uri).await?));
+                    }
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        for uri in artists {
+            out.push((uri.clone(), self.contains_legacy(uri).await?));
+        }
+        Ok(out)
+    }
+
+    async fn contains_legacy(&self, uri: &str) -> ServiceResult<bool> {
+        let id =
+            uri_id(uri).ok_or_else(|| ServiceError::new(ErrorKind::NotFound, "Invalid item"))?;
+        let path = match library_kind(uri) {
+            Some(MediaKind::Track) => format!("/me/tracks/contains?ids={id}"),
+            Some(MediaKind::Album) => format!("/me/albums/contains?ids={id}"),
+            Some(MediaKind::Episode) => format!("/me/episodes/contains?ids={id}"),
+            Some(MediaKind::Show) => format!("/me/shows/contains?ids={id}"),
+            Some(MediaKind::Artist) => format!("/me/following/contains?type=artist&ids={id}"),
+            Some(MediaKind::Playlist) => format!("/playlists/{id}/followers/contains"),
+            _ => return Err(ServiceError::unsupported("This item can't be saved")),
+        };
+        let flags: Vec<bool> = self.get_json(&path).await?;
+        Ok(flags.first().copied().unwrap_or(false))
+    }
+
+    /// Save or remove one item (follow/unfollow for artists).
+    pub async fn set_saved(&self, uri: &str, saved: bool) -> ServiceResult<()> {
+        let method = if saved {
+            http::Method::PUT
+        } else {
+            http::Method::DELETE
+        };
+        if library_kind(uri) != Some(MediaKind::Artist) {
+            match self
+                .send(method.clone(), &format!("/me/library?uris={}", encode(uri)))
+                .await
+            {
+                Err(e) if is_fallback(&e) => {}
+                other => return other,
+            }
+        }
+        let id =
+            uri_id(uri).ok_or_else(|| ServiceError::new(ErrorKind::NotFound, "Invalid item"))?;
+        let path = match library_kind(uri) {
+            Some(MediaKind::Track) => format!("/me/tracks?ids={id}"),
+            Some(MediaKind::Album) => format!("/me/albums?ids={id}"),
+            Some(MediaKind::Episode) => format!("/me/episodes?ids={id}"),
+            Some(MediaKind::Show) => format!("/me/shows?ids={id}"),
+            Some(MediaKind::Artist) => format!("/me/following?type=artist&ids={id}"),
+            Some(MediaKind::Playlist) => format!("/playlists/{id}/followers"),
+            _ => return Err(ServiceError::unsupported("This item can't be saved")),
+        };
+        self.send(method, &path).await
     }
 
     pub async fn queue(&self) -> ServiceResult<QueueSnapshot> {
@@ -930,6 +1047,17 @@ mod tests {
     fn malformed_json_is_an_error_not_a_panic() {
         assert!(parse_search("q", b"{not json").is_err());
         assert!(parse_queue(b"[]").is_err());
+    }
+
+    #[test]
+    fn library_kinds() {
+        assert_eq!(library_kind("spotify:artist:a"), Some(MediaKind::Artist));
+        assert_eq!(
+            library_kind("spotify:playlist:p"),
+            Some(MediaKind::Playlist)
+        );
+        assert_eq!(library_kind("spotify:user:me:collection"), None);
+        assert_eq!(library_kind("preview:album:1"), None);
     }
 
     #[test]

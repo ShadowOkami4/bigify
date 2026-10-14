@@ -30,6 +30,7 @@ FocusScope {
 
     Component.onCompleted: load()
     onItemChanged: load()
+    onShownChanged: if (shown && shown.uri) SavedState.check([shown.uri])
 
     Connections {
         target: Backend
@@ -109,6 +110,12 @@ FocusScope {
                     icon: "play"
                     busy: /\bload\b/.test(Backend.pending)
                     onClicked: Backend.playUri(root.shown.uri, "")
+                    KeyNavigation.down: tracks.count > 0 ? tracks : null
+                    KeyNavigation.right: saveButton
+                }
+                SaveButton {
+                    id: saveButton
+                    uri: root.shown.uri || ""
                     KeyNavigation.down: tracks.count > 0 ? tracks : null
                 }
             }

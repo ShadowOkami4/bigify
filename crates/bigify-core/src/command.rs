@@ -60,6 +60,15 @@ pub enum Command {
         index: u32,
     },
     AddToQueue(String),
+    /// Save (or remove) an item in the user's library; artists are followed.
+    SetSaved {
+        uri: String,
+        saved: bool,
+    },
+    /// Ask whether items are saved in the library.
+    CheckSaved {
+        uris: Vec<String>,
+    },
 
     LoadHome,
     Search {

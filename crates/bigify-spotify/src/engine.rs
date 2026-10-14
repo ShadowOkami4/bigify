@@ -739,6 +739,36 @@ impl Engine {
                     }
                 });
             }
+            Command::SetSaved { uri, saved } => {
+                tokio::spawn(async move {
+                    let result = match web {
+                        Ok(web) => web.set_saved(&uri, saved).await,
+                        Err(e) => Err(e),
+                    };
+                    match result {
+                        Ok(()) => sink(Event::Saved {
+                            states: vec![(uri, saved)],
+                        }),
+                        Err(e) => sink(Event::SaveFailed {
+                            uri,
+                            message: e.message,
+                        }),
+                    }
+                });
+            }
+            Command::CheckSaved { uris } => {
+                tokio::spawn(async move {
+                    let result = match web {
+                        Ok(web) => web.contains(&uris).await,
+                        Err(e) => Err(e),
+                    };
+                    match result {
+                        Ok(states) => sink(Event::Saved { states }),
+                        // Unknown state just hides the heart; not worth a toast.
+                        Err(e) => log::debug!("library check failed: {e}"),
+                    }
+                });
+            }
             Command::LoadPalette { artwork_url } => {
                 let cached = self.palettes.lock().ok().and_then(|c| c.get(&artwork_url));
                 if let Some(scheme) = cached {
@@ -817,6 +847,8 @@ fn command_name(cmd: &Command) -> &'static str {
         Command::PlayContext { .. } => "PlayContext",
         Command::PlayTracks { .. } => "PlayTracks",
         Command::AddToQueue(_) => "AddToQueue",
+        Command::SetSaved { .. } => "SetSaved",
+        Command::CheckSaved { .. } => "CheckSaved",
         Command::LoadHome => "LoadHome",
         Command::Search { .. } => "Search",
         Command::LoadLibrary { .. } => "LoadLibrary",

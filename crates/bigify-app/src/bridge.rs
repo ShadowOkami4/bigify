@@ -110,6 +110,13 @@ pub mod qobject {
         fn play_uri(self: Pin<&mut Self>, context_uri: &QString, track_uri: &QString);
         #[qinvokable]
         fn add_to_queue(self: Pin<&mut Self>, uri: &QString);
+        /// Save/remove (follow/unfollow for artists). Confirmation arrives
+        /// as `savedChanged`, failure as `saveFailed`.
+        #[qinvokable]
+        fn set_saved(self: Pin<&mut Self>, uri: &QString, saved: bool);
+        /// `uris_json` is a JSON array of Spotify URIs.
+        #[qinvokable]
+        fn check_saved(self: Pin<&mut Self>, uris_json: &QString);
         /// Report requests that were never confirmed. Called by QML on a
         /// timer only while `pending` is non-empty.
         #[qinvokable]
@@ -166,6 +173,10 @@ pub mod qobject {
         fn queue_loaded(self: Pin<&mut Self>, json: QString);
         #[qsignal]
         fn queue_failed(self: Pin<&mut Self>, kind: QString, message: QString);
+        #[qsignal]
+        fn saved_changed(self: Pin<&mut Self>, uri: QString, saved: bool);
+        #[qsignal]
+        fn save_failed(self: Pin<&mut Self>, uri: QString, message: QString);
         /// Transient message for a toast. `level` is "info" or "error".
         #[qsignal]
         fn notify(self: Pin<&mut Self>, level: QString, message: QString);
@@ -531,6 +542,13 @@ impl qobject::Backend {
                 if let Some(err) = outcome.error {
                     self.as_mut().notify_error(&err);
                 }
+                // Learn whether the new track is in Liked Songs.
+                if outcome.track_changed {
+                    let uri = self.track_uri().to_string();
+                    if uri.starts_with("spotify:") {
+                        send(Command::CheckSaved { uris: vec![uri] });
+                    }
+                }
                 self.as_mut().refresh_palette();
             }
             Event::Home(Ok(sections)) => self.home_loaded(json(&sections)),
@@ -593,6 +611,17 @@ impl qobject::Backend {
                 if self.rust().settings.dynamic_color && self.rust().palette_for == artwork_url {
                     self.as_mut().set_scheme_json(json(&scheme));
                 }
+            }
+            Event::Saved { states } => {
+                for (uri, saved) in states {
+                    self.as_mut()
+                        .saved_changed(QString::from(uri.as_str()), saved);
+                }
+            }
+            Event::SaveFailed { uri, message } => {
+                self.as_mut()
+                    .save_failed(QString::from(uri.as_str()), QString::from(message.as_str()));
+                self.notify_error(&format!("Couldn't update your library. {message}"));
             }
             Event::CommandFailed { message } => {
                 self.as_mut().rust_mut().playback.clear_pending();
@@ -701,6 +730,30 @@ impl qobject::Backend {
         let uri = uri.to_string();
         if !uri.is_empty() && send(Command::AddToQueue(uri)) {
             self.notify(QString::from("info"), QString::from("Added to queue"));
+        }
+    }
+
+    pub fn set_saved(self: Pin<&mut Self>, uri: &QString, saved: bool) {
+        let uri = uri.to_string();
+        if !uri.is_empty()
+            && !send(Command::SetSaved {
+                uri: uri.clone(),
+                saved,
+            })
+        {
+            self.save_failed(QString::from(uri.as_str()), QString::from("Not connected"));
+        }
+    }
+
+    pub fn check_saved(self: Pin<&mut Self>, uris_json: &QString) {
+        let uris: Vec<String> = serde_json::from_str(&uris_json.to_string()).unwrap_or_default();
+        let uris: Vec<String> = uris
+            .into_iter()
+            .filter(|u| u.starts_with("spotify:"))
+            .take(200)
+            .collect();
+        if !uris.is_empty() {
+            send(Command::CheckSaved { uris });
         }
     }
 

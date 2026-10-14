@@ -29,6 +29,7 @@ Item {
         "repeat": "M7 4 L4 7 L7 10 M4 7 H17 A3 3 0 0 1 20 10 V11.5 M17 20 L20 17 L17 14 M20 17 H7 A3 3 0 0 1 4 14 V12.5",
         "repeatOne": "M7 4 L4 7 L7 10 M4 7 H17 A3 3 0 0 1 20 10 V11.5 M17 20 L20 17 L17 14 M20 17 H7 A3 3 0 0 1 4 14 V12.5 M11 10.8 L12.4 10 V14.2",
         "queue": "M4 6 H16 M4 11 H16 M4 16 H10 M14 13.5 V20.5 L19.5 17 Z",
+        "add": "M12 5 V19 M5 12 H19",
         "addQueue": "M4 6 H14 M4 11 H14 M4 16 H10 M17 13 V21 M13 17 H21",
         "volumeDown": "M4 9.5 H7.5 L12 5.5 V18.5 L7.5 14.5 H4 Z M16 9.5 A3.5 3.5 0 0 1 16 14.5",
         "volumeUp": "M4 9.5 H7.5 L12 5.5 V18.5 L7.5 14.5 H4 Z M16 9.5 A3.5 3.5 0 0 1 16 14.5 M18.5 6.8 A7.5 7.5 0 0 1 18.5 17.2",
@@ -44,6 +45,7 @@ Item {
         "album": "M12 21 A9 9 0 1 0 12 3 A9 9 0 1 0 12 21 Z M12 14 A2 2 0 1 0 12 10 A2 2 0 1 0 12 14 Z",
         "playlist": "M4 6 H16 M4 11 H16 M4 16 H11 M18 18 V9 L21 8 M18 18 A2 2 0 1 1 14 18 A2 2 0 1 1 18 18 Z",
         "heart": "M12 20 C5 15 3 12 3 8.5 A4.5 4.5 0 0 1 12 6.5 A4.5 4.5 0 0 1 21 8.5 C21 12 19 15 12 20 Z",
+        "heartFilled": "M12 20 C5 15 3 12 3 8.5 A4.5 4.5 0 0 1 12 6.5 A4.5 4.5 0 0 1 21 8.5 C21 12 19 15 12 20 Z",
         "phone": "M8 3 H16 A2 2 0 0 1 18 5 V19 A2 2 0 0 1 16 21 H8 A2 2 0 0 1 6 19 V5 A2 2 0 0 1 8 3 Z M11 18 H13",
         "browser": "M12 21 A9 9 0 1 0 12 3 A9 9 0 1 0 12 21 Z M3 12 H21 M12 3 C9.5 6 9.5 18 12 21 M12 3 C14.5 6 14.5 18 12 21",
         "power": "M12 3 V11 M7 5.8 A8 8 0 1 0 17 5.8",
@@ -51,7 +53,7 @@ Item {
         "gamepad": "M7 8 H17 A4 4 0 0 1 21 12 V14 A3 3 0 0 1 15.8 16 L14.5 14.5 H9.5 L8.2 16 A3 3 0 0 1 3 14 V12 A4 4 0 0 1 7 8 Z M7 11 V14 M5.5 12.5 H8.5 M16 11.5 V11.6 M17.5 13 V13.1",
         "speaker": "M7 3 H17 A1 1 0 0 1 18 4 V20 A1 1 0 0 1 17 21 H7 A1 1 0 0 1 6 20 V4 A1 1 0 0 1 7 3 Z M15 14.5 A3 3 0 1 1 9 14.5 A3 3 0 1 1 15 14.5 Z M12 7 V7.1"
     })
-    readonly property var solid: ["play", "pause", "next", "previous"]
+    readonly property var solid: ["play", "pause", "next", "previous", "heartFilled"]
 
     Shape {
         anchors.centerIn: parent

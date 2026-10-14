@@ -14,6 +14,9 @@ FocusScope {
     function isPending(id) { return new RegExp("\\b" + id + "\\b").test(Backend.pending) }
 
     PositionClock { id: clock; active: root.visible }
+    // Real sessions check the Liked state when the track changes (bridge);
+    // the design preview has no backend to ask.
+    Component.onCompleted: if (Backend.designPreview) SavedState.check([Backend.trackUri])
 
     // ---- Backdrop: blurred artwork, dimmed for legibility ---------------
     Rectangle { anchors.fill: parent; color: Theme.surface }
@@ -224,7 +227,7 @@ FocusScope {
                     onClicked: Backend.toggleShuffle()
                     KeyNavigation.right: prevButton
                     KeyNavigation.up: progress.visible ? progress : null
-                    KeyNavigation.down: queueButton
+                    KeyNavigation.down: likeButton.visible ? likeButton : queueButton
                 }
                 IconButton {
                     id: prevButton
@@ -282,6 +285,20 @@ FocusScope {
             // Secondary: queue and volume
             Row {
                 spacing: Theme.space.xl
+                IconButton {
+                    id: likeButton
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: SavedState.isKnown(Backend.trackUri)
+                    icon: SavedState.isSaved(Backend.trackUri) ? "heartFilled" : "heart"
+                    toggle: true
+                    checked: SavedState.isSaved(Backend.trackUri)
+                    busy: SavedState.isPending(Backend.trackUri)
+                    size: Theme.dp(64)
+                    accessibleName: checked ? qsTr("Remove from Liked Songs") : qsTr("Add to Liked Songs")
+                    onClicked: SavedState.toggle(Backend.trackUri)
+                    KeyNavigation.up: shuffleButton
+                    KeyNavigation.right: queueButton
+                }
                 PillButton {
                     id: queueButton
                     anchors.verticalCenter: parent.verticalCenter
@@ -291,6 +308,7 @@ FocusScope {
                     height_: Theme.size.buttonSmall
                     onClicked: root.openQueue()
                     KeyNavigation.up: playPause
+                    KeyNavigation.left: likeButton.visible ? likeButton : null
                     KeyNavigation.right: volumeDown
                 }
                 Item { width: Theme.space.xl; height: 1 }

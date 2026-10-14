@@ -344,6 +344,16 @@ Window {
 
         // ---- Backend wiring ------------------------------------------------
         Connections {
+            target: SavedState
+            function onConfirmed(uri, saved, kind) {
+                const artist = kind === "artist"
+                toast.show("info", saved ? (artist ? qsTr("Following") : qsTr("Added to your library"))
+                                         : (artist ? qsTr("Unfollowed") : qsTr("Removed from your library")))
+                library.reload()
+            }
+        }
+
+        Connections {
             target: Backend
             function onNotify(level, message) { toast.show(level, message) }
             function onAuthStateChanged() {
@@ -374,6 +384,7 @@ Window {
                 Backend.hasTrack = true
                 Backend.isPlaying = true
                 Backend.playbackStatus = "playing"
+                Backend.trackUri = "preview:track:0"
                 Backend.trackTitle = "Sample Track With A Longer Title"
                 Backend.trackArtists = "Sample Artist, Featured Artist"
                 Backend.trackAlbum = "Sample Album"

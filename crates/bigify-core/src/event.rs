@@ -33,6 +33,15 @@ pub enum Event {
         artwork_url: String,
         scheme: Box<Scheme>,
     },
+    /// Confirmed library state for these URIs.
+    Saved {
+        states: Vec<(String, bool)>,
+    },
+    /// Saving or removing failed; the UI drops its pending indicator.
+    SaveFailed {
+        uri: String,
+        message: String,
+    },
     /// A command failed without a more specific event to carry the error.
     CommandFailed {
         message: String,

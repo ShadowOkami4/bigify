@@ -16,6 +16,7 @@ const QML_FILES: &[&str] = &[
     "qml/components/PillButton.qml",
     "qml/components/PlayPauseButton.qml",
     "qml/components/PositionClock.qml",
+    "qml/components/SaveButton.qml",
     "qml/components/SettingRow.qml",
     "qml/components/Shelf.qml",
     "qml/components/StatePanel.qml",
@@ -33,7 +34,11 @@ const QML_FILES: &[&str] = &[
     "qml/screens/SignInScreen.qml",
 ];
 
-const QML_SINGLETONS: &[&str] = &["qml/theme/Theme.qml", "qml/PreviewData.qml"];
+const QML_SINGLETONS: &[&str] = &[
+    "qml/theme/Theme.qml",
+    "qml/PreviewData.qml",
+    "qml/SavedState.qml",
+];
 
 fn main() {
     let module = QmlModule::new("Bigify")

@@ -58,7 +58,7 @@ clients have done (the maintainers chose this option; see
 | Queue: view | ⚠️ | Web API `GET /me/player/queue` | Read-only |
 | Queue: add | ⚠️ | Web API `POST /me/player/queue` | |
 | Queue: reorder / remove | ❌ | — | No public interface |
-| Save / unsave to library | ❌ (planned) | Web API `PUT/DELETE /me/library` | Not implemented yet |
+| Save / unsave albums, playlists, tracks; follow artists | ⚠️ | Web API `PUT/DELETE /me/library` (new) with fallback to type-specific endpoints; `/me/following` for artists | Buttons appear only after Spotify reports the current state; changes show as pending until confirmed |
 | Lyrics | ❌ (planned) | librespot has an internal lyrics API | Not implemented; unofficial |
 | Audio quality 96/160/320 kbit/s | ✅ | librespot `PlayerConfig` | Applies after restart |
 | Normalisation, gapless | ✅ | librespot `PlayerConfig` | Applies after restart |
