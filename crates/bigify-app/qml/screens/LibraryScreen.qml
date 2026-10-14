@@ -199,6 +199,7 @@ FocusScope {
             clip: true
             model: root.kind === "likedSongs" ? root.model : null
             spacing: Theme.space.s
+            topMargin: Theme.focusGap + Theme.focusWidth + Theme.dp(4)
             bottomMargin: Theme.safeV + Theme.size.miniPlayer
             keyNavigationEnabled: true
             highlightRangeMode: ListView.ApplyRange

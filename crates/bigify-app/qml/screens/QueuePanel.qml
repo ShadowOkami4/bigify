@@ -91,6 +91,7 @@ FocusScope {
             focus: true
             clip: true
             spacing: Theme.space.s
+            topMargin: Theme.focusGap + Theme.focusWidth + Theme.dp(4)
             bottomMargin: Theme.safeV
             keyNavigationEnabled: true
             highlightRangeMode: ListView.ApplyRange

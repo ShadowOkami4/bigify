@@ -137,6 +137,8 @@ FocusScope {
         anchors { top: header.bottom; topMargin: Theme.space.xxl; left: parent.left; right: parent.right; bottom: parent.bottom }
         leftMargin: Theme.safeH
         rightMargin: Theme.safeH
+        // Room for the focus ring above the first row (the list clips).
+        topMargin: Theme.focusGap + Theme.focusWidth + Theme.dp(4)
         bottomMargin: Theme.safeV
         clip: true
         visible: root.status === "ready"

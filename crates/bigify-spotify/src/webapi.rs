@@ -101,9 +101,17 @@ pub struct Owner {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct PlaylistItemEntry {
-    /// Renamed from `track` to `item` in the February 2026 API changes.
-    #[serde(alias = "item")]
-    pub track: Option<Track>,
+    /// `track` was renamed to `item` in February 2026. Responses may carry
+    /// both, so they are separate fields (a serde alias would reject that
+    /// as a duplicate field).
+    track: Option<Track>,
+    item: Option<Track>,
+}
+
+impl PlaylistItemEntry {
+    pub fn track(&self) -> Option<&Track> {
+        self.item.as_ref().or(self.track.as_ref())
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -114,9 +122,25 @@ pub struct Playlist {
     #[serde(default)]
     pub images: Option<Vec<Image>>,
     pub description: Option<String>,
-    /// `tracks` was renamed to `items` in February 2026; accept both.
-    #[serde(alias = "items")]
-    pub tracks: Option<PlaylistTracks>,
+    /// `tracks` was renamed to `items` in February 2026; responses may carry
+    /// both (see [`Playlist::contents`]).
+    tracks: Option<PlaylistTracks>,
+    items: Option<PlaylistTracks>,
+}
+
+impl Playlist {
+    /// The playlist's item paging object, preferring whichever field
+    /// actually carries entries, then whichever reports a total.
+    pub fn contents(&self) -> Option<&PlaylistTracks> {
+        let candidates = [self.items.as_ref(), self.tracks.as_ref()];
+        candidates
+            .iter()
+            .flatten()
+            .find(|c| !c.items.is_empty())
+            .or_else(|| candidates.iter().flatten().find(|c| c.total.is_some()))
+            .or_else(|| candidates.iter().flatten().next())
+            .copied()
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -455,13 +479,13 @@ pub fn parse_playlist_detail(body: &[u8]) -> ServiceResult<CollectionDetail> {
     let p: Playlist = parse(body)?;
     let item =
         playlist_item(&p).ok_or_else(|| ServiceError::internal("Playlist is missing its name"))?;
-    let entries = p.tracks.as_ref().map(|t| t.items.as_slice()).unwrap_or(&[]);
+    let entries = p.contents().map(|t| t.items.as_slice()).unwrap_or(&[]);
     let tracks: Vec<MediaItem> = entries
         .iter()
-        .filter_map(|e| e.track.as_ref())
+        .filter_map(|e| e.track())
         .filter_map(|t| track_item(t, Some(&item.uri)))
         .collect();
-    let total = p.tracks.as_ref().and_then(|t| t.total);
+    let total = p.contents().and_then(|t| t.total);
     let description = non_empty(p.description.clone())
         .map(|d| strip_html(&d))
         .or_else(|| total.map(|n| plural(n, "song")))
@@ -1139,6 +1163,37 @@ mod tests {
                 .unwrap()
                 .tracks
                 .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn playlist_with_both_old_and_new_fields() {
+        // Spotify sends both `tracks` and `items` (and `track` + `item`).
+        let body = format!(
+            r#"{{"uri": "spotify:playlist:p", "name": "P",
+                "tracks": {{"href": "x", "total": 2}},
+                "items": {{"total": 2, "items": [{{"track": {TRACK}, "item": {TRACK}}}]}}}}"#
+        );
+        let d = parse_playlist_detail(body.as_bytes()).unwrap();
+        assert_eq!(d.tracks.len(), 1);
+        assert_eq!(d.total_tracks, Some(2));
+
+        let search = r#"{"playlists": {"items": [
+            {"uri": "spotify:playlist:p", "name": "P", "owner": {"display_name": "me"},
+             "tracks": {"href": "x", "total": 5}, "items": {"href": "y", "total": 5}}
+        ]}}"#;
+        assert_eq!(
+            parse_search("q", search.as_bytes())
+                .unwrap()
+                .playlists
+                .len(),
+            1
+        );
+        let library = r#"{"items": [{"uri": "spotify:playlist:p", "name": "P",
+            "tracks": {"total": 1}, "items": {"total": 1}}], "total": 1}"#;
+        assert_eq!(
+            parse_playlists(library.as_bytes(), 0).unwrap().items.len(),
             1
         );
     }
