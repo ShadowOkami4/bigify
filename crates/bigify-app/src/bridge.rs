@@ -18,7 +18,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use bigify_core::color::Scheme;
 use bigify_core::error::ServiceError;
 use bigify_core::model::join_names;
-use bigify_core::playback::{Intent, PlaybackState, DEFAULT_CONFIRM_TIMEOUT_MS};
+use bigify_core::playback::{Intent, PlaybackState, PlayerUpdate, DEFAULT_CONFIRM_TIMEOUT_MS};
 use bigify_core::settings::Settings;
 use bigify_core::{paths, AuthState, Command, Event, LibraryKind};
 use bigify_spotify::{EngineConfig, EventSink, ServiceHandle};
@@ -191,6 +191,8 @@ pub mod qobject {
 /// service thread queueing onto the dying object).
 struct Runtime {
     service: Option<ServiceHandle>,
+    #[cfg(all(feature = "mpris", target_os = "linux"))]
+    mpris: Option<crate::mpris::Handle>,
     input_stop: Arc<AtomicBool>,
     input_enabled: Arc<AtomicBool>,
     input_thread: Option<JoinHandle<()>>,
@@ -214,6 +216,10 @@ pub fn shutdown() {
     let runtime = RUNTIME.lock().ok().and_then(|mut rt| rt.take());
     if let Some(mut rt) = runtime {
         rt.input_stop.store(true, Ordering::Relaxed);
+        #[cfg(all(feature = "mpris", target_os = "linux"))]
+        if let Some(mpris) = rt.mpris.take() {
+            mpris.shutdown();
+        }
         if let Some(service) = rt.service.take() {
             service.shutdown();
         }
@@ -374,9 +380,22 @@ impl cxx_qt::Initialize for qobject::Backend {
             )
         });
 
+        #[cfg(all(feature = "mpris", target_os = "linux"))]
+        let mpris = (!preview)
+            .then(|| {
+                let qt = self.qt_thread();
+                let control: crate::mpris::ControlSink = Arc::new(move |c| {
+                    let _ = qt.queue(move |obj| obj.handle_mpris(c));
+                });
+                crate::mpris::start(control)
+            })
+            .flatten();
+
         if let Ok(mut rt) = RUNTIME.lock() {
             *rt = Some(Runtime {
                 service,
+                #[cfg(all(feature = "mpris", target_os = "linux"))]
+                mpris,
                 input_stop,
                 input_enabled,
                 input_thread,
@@ -493,6 +512,81 @@ impl qobject::Backend {
         self.as_mut().sync_pending();
     }
 
+    /// Publish confirmed playback state over MPRIS.
+    fn publish_mpris(&self, seeked: bool) {
+        #[cfg(all(feature = "mpris", target_os = "linux"))]
+        {
+            use crate::mpris::{MprisState, Status};
+            let p = &self.rust().playback;
+            let track = p.track.as_ref();
+            let state = MprisState {
+                status: match p.status {
+                    bigify_core::playback::PlaybackStatus::Playing => Status::Playing,
+                    _ if p.has_track() => Status::Paused,
+                    _ => Status::Stopped,
+                },
+                track_uri: track.map(|t| t.uri.clone()).unwrap_or_default(),
+                title: track.map(|t| t.title.clone()).unwrap_or_default(),
+                artists: track.map(|t| t.artists.clone()).unwrap_or_default(),
+                album: track.and_then(|t| t.album.clone()).unwrap_or_default(),
+                art_url: track
+                    .and_then(|t| t.artwork_url.clone())
+                    .unwrap_or_default(),
+                length_ms: track.map(|t| t.duration_ms).unwrap_or(0),
+                position_ms: p.position_at(self.now_ms()),
+                shuffle: p.shuffle,
+                repeat: p.repeat,
+                volume: f64::from(p.volume) / f64::from(u16::MAX),
+                seeked,
+            };
+            if let Ok(rt) = RUNTIME.lock() {
+                if let Some(m) = rt.as_ref().and_then(|r| r.mpris.as_ref()) {
+                    m.update(state);
+                }
+            }
+        }
+        #[cfg(not(all(feature = "mpris", target_os = "linux")))]
+        let _ = seeked;
+    }
+
+    /// Remote control from MPRIS, routed through the same paths as the UI.
+    #[cfg(all(feature = "mpris", target_os = "linux"))]
+    fn handle_mpris(mut self: Pin<&mut Self>, control: crate::mpris::Control) {
+        use crate::mpris::Control;
+        let playing = self.rust().playback.is_playing();
+        match control {
+            Control::Play if !playing => self.toggle_play(),
+            Control::Pause if playing => self.toggle_play(),
+            Control::Play | Control::Pause => {}
+            Control::PlayPause => self.toggle_play(),
+            Control::Next => self.next(),
+            Control::Previous => self.previous(),
+            Control::SeekBy(delta) => {
+                let now = self.now_ms();
+                let pos = i64::from(self.rust().playback.position_at(now)) + delta;
+                self.seek(pos.clamp(0, i64::from(i32::MAX)) as i32);
+            }
+            Control::SetPosition {
+                track_uri,
+                position_ms,
+            } => {
+                if self.track_uri().to_string() == track_uri {
+                    self.seek(position_ms.clamp(0, i64::from(i32::MAX)) as i32);
+                }
+            }
+            Control::Shuffle(on) => {
+                if self.rust().playback.shuffle != on {
+                    self.toggle_shuffle();
+                }
+            }
+            Control::Repeat(mode) => {
+                self.as_mut()
+                    .request(Intent::Repeat(mode), Command::SetRepeat(mode));
+            }
+            Control::Volume(v) => self.set_volume_level(v),
+        }
+    }
+
     fn refresh_palette(mut self: Pin<&mut Self>) {
         let art = self.artwork_url().to_string();
         if !self.rust().settings.dynamic_color || art.is_empty() {
@@ -537,8 +631,10 @@ impl qobject::Backend {
             }
             Event::Player(update) => {
                 let now = self.now_ms();
+                let seeked = matches!(update, PlayerUpdate::Seeked { .. });
                 let outcome = self.as_mut().rust_mut().playback.apply(update, now);
                 self.as_mut().sync_player();
+                self.publish_mpris(seeked);
                 if let Some(err) = outcome.error {
                     self.as_mut().notify_error(&err);
                 }

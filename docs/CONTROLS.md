@@ -20,6 +20,10 @@ naming; PlayStation and Steam Deck buttons map by position.
 
 The mouse works everywhere (click to select) but is never required.
 
+Media keys on keyboards, Bluetooth headsets and desktop media widgets work
+through MPRIS (`org.mpris.MediaPlayer2.Bigify`). Try it with
+`playerctl -p Bigify play-pause`.
+
 ## Steam Input
 
 - **Gaming Mode:** Steam exposes the Deck controls (or an attached controller)

@@ -44,6 +44,7 @@ Everything crosses the boundary as `bigify_core::Command` / `bigify_core::Event`
 | `bigify-spotify` + 2 `bigify-net` Tokio workers | librespot, HTTP, artwork decoding (`spawn_blocking`) |
 | librespot player thread | Audio decoding and output (owned by librespot) |
 | `bigify-input` | Blocks on gilrs events; wakes only for input or key repeat |
+| `bigify-mpris` | zbus MPRIS server on a local Tokio runtime; receives state snapshots, queues remote controls onto the Qt thread |
 | `bigify-oauth` (transient) | librespot's blocking OAuth redirect listener |
 
 Service events are delivered with `CxxQtThread::queue`, so QObject state is

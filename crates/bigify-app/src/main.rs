@@ -4,6 +4,7 @@
 mod bridge;
 mod input;
 mod logging;
+mod mpris;
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QString, QUrl};
 

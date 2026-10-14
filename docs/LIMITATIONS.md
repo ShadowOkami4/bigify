@@ -60,6 +60,7 @@ clients have done (the maintainers chose this option; see
 | Queue: reorder / remove | ❌ | — | No public interface |
 | Save / unsave albums, playlists, tracks; follow artists | ⚠️ | Web API `PUT/DELETE /me/library` (new) with fallback to type-specific endpoints; `/me/following` for artists | Buttons appear only after Spotify reports the current state; changes show as pending until confirmed |
 | Lyrics | ❌ (planned) | librespot has an internal lyrics API | Not implemented; unofficial |
+| Desktop integration (MPRIS): media keys, KDE/GNOME media widgets, `playerctl`, headset buttons | ✅ | D-Bus (zbus, pure Rust) | Reports confirmed state; controls go through the same pending/confirm path as the UI. Disabled without a session bus |
 | Audio quality 96/160/320 kbit/s | ✅ | librespot `PlayerConfig` | Applies after restart |
 | Normalisation, gapless | ✅ | librespot `PlayerConfig` | Applies after restart |
 | Output: PulseAudio / PipeWire, ALSA | ✅ | librespot backends | Device follows the system default; no per-device picker yet |

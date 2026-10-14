@@ -11,10 +11,12 @@ name = "bigify"
 path = "src/main.rs"
 
 [features]
-default = ["gamepad"]
+default = ["gamepad", "mpris"]
 # Read game controllers directly (evdev via gilrs). Without it, Bigify still
 # works with keyboards and Steam Input's keyboard mappings.
 gamepad = ["dep:gilrs"]
+# Media keys, desktop media widgets and playerctl via D-Bus (Linux only).
+mpris = ["dep:mpris-server", "dep:tokio"]
 
 [dependencies]
 bigify-core.workspace = true
@@ -27,6 +29,8 @@ cxx-qt = "0.10"
 cxx-qt-lib = { version = "0.10", features = ["qt_gui", "qt_qml"] }
 env_logger = { version = "0.11", default-features = false, features = ["humantime"] }
 gilrs = { version = "0.11", optional = true }
+mpris-server = { version = "0.10", features = ["tokio"], optional = true }
+tokio = { version = "1", features = ["rt", "sync"], optional = true }
 
 [build-dependencies]
 cxx-qt-build = "0.10"
