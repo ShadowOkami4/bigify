@@ -10,8 +10,7 @@ exec env MSYS_NO_PATHCONV=1 docker run --rm --privileged \
   -v "$ROOT:/src" \
   -v bigify-flatpak-repo:/var/lib/flatpak \
   bigify-flatpak sh -euc '
-    # TODO: add <url type="homepage"> once the project has a permanent home.
-    appstreamcli validate --no-net --override=url-homepage-missing=info \
+    appstreamcli validate --no-net \
       packaging/linux/io.github.bigify.Bigify.metainfo.xml
     python3 /usr/local/bin/flatpak-cargo-generator.py Cargo.lock \
       -o packaging/flatpak/cargo-sources.json

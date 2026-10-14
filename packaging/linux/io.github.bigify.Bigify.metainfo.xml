@@ -27,6 +27,9 @@
       and is not affiliated with, endorsed or sponsored by Spotify.
     </p>
   </description>
+  <url type="homepage">https://github.com/ShadowOkami4/bigify</url>
+  <url type="bugtracker">https://github.com/ShadowOkami4/bigify/issues</url>
+  <url type="vcs-browser">https://github.com/ShadowOkami4/bigify</url>
   <launchable type="desktop-id">io.github.bigify.Bigify.desktop</launchable>
   <categories>
     <category>AudioVideo</category>
