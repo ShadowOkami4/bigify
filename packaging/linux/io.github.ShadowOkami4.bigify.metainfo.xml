@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The app id is a placeholder until the project has a permanent home. -->
 <component type="desktop-application">
-  <id>io.github.bigify.Bigify</id>
+  <id>io.github.ShadowOkami4.bigify</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>Bigify</name>
   <summary>Spotify Connect player for TVs and Steam Deck</summary>
-  <developer id="io.github.bigify">
+  <developer id="io.github.shadowokami4">
     <name>Bigify contributors</name>
   </developer>
   <description>
@@ -30,7 +29,7 @@
   <url type="homepage">https://github.com/ShadowOkami4/bigify</url>
   <url type="bugtracker">https://github.com/ShadowOkami4/bigify/issues</url>
   <url type="vcs-browser">https://github.com/ShadowOkami4/bigify</url>
-  <launchable type="desktop-id">io.github.bigify.Bigify.desktop</launchable>
+  <launchable type="desktop-id">io.github.ShadowOkami4.bigify.desktop</launchable>
   <categories>
     <category>AudioVideo</category>
     <category>Audio</category>

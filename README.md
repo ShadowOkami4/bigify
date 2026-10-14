@@ -56,13 +56,15 @@ to queue · **LB/RB** previous/next · **LT/RT** volume · **Start** Now Playing
 
 ## Install
 
-A Flatpak bundle can be built with `ci/flatpak.sh` (see
-[DEVELOPMENT.md](docs/DEVELOPMENT.md#flatpak)) and installed on SteamOS or
-any Flatpak-enabled distribution:
+Download the Flatpak from the
+[latest release](https://github.com/ShadowOkami4/bigify/releases/latest) and run:
 
 ```sh
-flatpak install --user dist/bigify.flatpak
+flatpak install --user ./bigify-*-x86_64.flatpak
 ```
+
+**Steam Deck / SteamOS:** step-by-step guide, including adding Bigify to
+Gaming Mode and the controller layout, in [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Build
 

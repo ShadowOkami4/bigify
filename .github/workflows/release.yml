@@ -1,0 +1,36 @@
+name: Release
+# Push a version tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`) to
+# build the Flatpak bundle and publish it as a GitHub release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  flatpak:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build Flatpak tooling image
+        run: docker build -t bigify-flatpak -f ci/flatpak.Dockerfile .
+      - name: Build Flatpak bundle
+        run: ci/flatpak.sh
+      - name: Name and checksum the bundle
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          OUT="bigify-${VERSION}-x86_64.flatpak"
+          sudo mv dist/bigify.flatpak "dist/$OUT"
+          cd dist && sha256sum "$OUT" | sudo tee "$OUT.sha256"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PRERELEASE=""
+          case "$VERSION" in 0.*|*-*) PRERELEASE="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/bigify-*.flatpak dist/bigify-*.sha256 \
+            --title "Bigify $VERSION" \
+            --notes-file .github/release-notes.md \
+            $PRERELEASE

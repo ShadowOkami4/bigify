@@ -183,7 +183,7 @@ mod server {
     async fn run(control: ControlSink, mut rx: mpsc::UnboundedReceiver<MprisState>) {
         let player = match Player::builder("Bigify")
             .identity("Bigify")
-            .desktop_entry("io.github.bigify.Bigify")
+            .desktop_entry("io.github.ShadowOkami4.bigify")
             .can_play(false)
             .can_pause(false)
             .can_seek(false)

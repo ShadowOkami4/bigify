@@ -11,7 +11,7 @@ exec env MSYS_NO_PATHCONV=1 docker run --rm --privileged \
   -v bigify-flatpak-repo:/var/lib/flatpak \
   bigify-flatpak sh -euc '
     appstreamcli validate --no-net \
-      packaging/linux/io.github.bigify.Bigify.metainfo.xml
+      packaging/linux/io.github.ShadowOkami4.bigify.metainfo.xml
     python3 /usr/local/bin/flatpak-cargo-generator.py Cargo.lock \
       -o packaging/flatpak/cargo-sources.json
     # State dir, build dir and repo share the cached volume, so they are on
@@ -19,8 +19,11 @@ exec env MSYS_NO_PATHCONV=1 docker run --rm --privileged \
     W=/var/lib/flatpak/bigify-work
     flatpak-builder --system --install-deps-from=flathub --force-clean \
       --disable-rofiles-fuse --state-dir="$W/state" --repo="$W/repo" \
-      "$W/build" packaging/flatpak/io.github.bigify.Bigify.yml
+      "$W/build" packaging/flatpak/io.github.ShadowOkami4.bigify.yml
     mkdir -p dist
-    flatpak build-bundle "$W/repo" dist/bigify.flatpak io.github.bigify.Bigify
+    # --runtime-repo lets `flatpak install bigify.flatpak` fetch the KDE
+    # runtime from Flathub automatically (e.g. on a fresh Steam Deck).
+    flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
+      "$W/repo" dist/bigify.flatpak io.github.ShadowOkami4.bigify
     ls -la dist/bigify.flatpak
   '

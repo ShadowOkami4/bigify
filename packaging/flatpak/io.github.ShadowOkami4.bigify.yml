@@ -1,9 +1,8 @@
 # Bigify Flatpak manifest. Build with ci/flatpak.sh (Docker) or:
 #   flatpak-cargo-generator.py Cargo.lock -o packaging/flatpak/cargo-sources.json
 #   flatpak-builder --user --install-deps-from=flathub --force-clean \
-#       flatpak-build packaging/flatpak/io.github.bigify.Bigify.yml
-# The app id is a placeholder until the project has a permanent home.
-app-id: io.github.bigify.Bigify
+#       flatpak-build packaging/flatpak/io.github.ShadowOkami4.bigify.yml
+app-id: io.github.ShadowOkami4.bigify
 runtime: org.kde.Platform
 runtime-version: '6.10'
 sdk: org.kde.Sdk
@@ -35,9 +34,9 @@ modules:
     build-commands:
       - cargo --offline build --release --locked -p bigify
       - install -Dm755 target/release/bigify /app/bin/bigify
-      - install -Dm644 packaging/linux/io.github.bigify.Bigify.desktop /app/share/applications/io.github.bigify.Bigify.desktop
-      - install -Dm644 packaging/linux/io.github.bigify.Bigify.svg /app/share/icons/hicolor/scalable/apps/io.github.bigify.Bigify.svg
-      - install -Dm644 packaging/linux/io.github.bigify.Bigify.metainfo.xml /app/share/metainfo/io.github.bigify.Bigify.metainfo.xml
+      - install -Dm644 packaging/linux/io.github.ShadowOkami4.bigify.desktop /app/share/applications/io.github.ShadowOkami4.bigify.desktop
+      - install -Dm644 packaging/linux/io.github.ShadowOkami4.bigify.svg /app/share/icons/hicolor/scalable/apps/io.github.ShadowOkami4.bigify.svg
+      - install -Dm644 packaging/linux/io.github.ShadowOkami4.bigify.metainfo.xml /app/share/metainfo/io.github.ShadowOkami4.bigify.metainfo.xml
     sources:
       - type: dir
         path: ../..
