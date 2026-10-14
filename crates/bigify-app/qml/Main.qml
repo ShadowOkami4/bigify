@@ -421,8 +421,13 @@ Window {
             }
             const start = window.dev.startScreen
             if (start === "nowPlaying") app.openNowPlaying()
+            else if (start === "lyrics") { app.openNowPlaying(); nowPlaying.toggleLyrics() }
+            else if (start === "immersive") { app.openNowPlaying(); nowPlaying.enterImmersive() }
+            else if (start === "immersiveLyrics") { app.openNowPlaying(); nowPlaying.toggleLyrics(); nowPlaying.enterImmersive() }
             else if (start === "queue") { app.openNowPlaying(); app.openQueue() }
             else if (start === "rail") rail.forceActiveFocus()
+            else if (start === "lyrics") { app.openNowPlaying(); nowPlaying.toggleLyrics() }
+            else if (start === "immersive") { app.openNowPlaying(); nowPlaying.enterImmersive() }
             else if (start === "artist" && Backend.designPreview) setDetail("home", PreviewData.homeSections[3].items[0])
             else if (start === "album" && Backend.designPreview) setDetail("home", PreviewData.homeSections[4].items[0])
             else if (start && start !== "home") app.section = start

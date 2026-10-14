@@ -53,6 +53,13 @@ QtObject {
                  albums: many("album", "Album", "2024", 8), singles: many("album", "Single", "2025", 6) }
     }
 
+    readonly property var lyrics: {
+        const lines = []
+        for (let i = 0; i < 50; i++)
+            lines.push({ timeMs: 4000 + i * 4200, text: i % 6 === 5 ? "" : "Sample lyric line " + (i + 1) })
+        return { lines: lines, synced: true, instrumental: false, source: "Preview" }
+    }
+
     readonly property var queue: ({ current: make("track", 1, "Sample Track 1", "Sample Artist"),
                                     upcoming: many("track", "Up Next Track", "Sample Artist", 8) })
 }

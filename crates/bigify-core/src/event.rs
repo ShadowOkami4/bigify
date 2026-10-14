@@ -2,7 +2,9 @@ use crate::auth::AuthState;
 use crate::color::Scheme;
 use crate::command::LibraryKind;
 use crate::error::ServiceResult;
-use crate::model::{ArtistDetail, CollectionDetail, Page, QueueSnapshot, SearchResults, Section};
+use crate::model::{
+    ArtistDetail, CollectionDetail, Lyrics, Page, QueueSnapshot, SearchResults, Section,
+};
 use crate::playback::PlayerUpdate;
 
 /// Notifications from the Spotify service to the UI.
@@ -29,6 +31,10 @@ pub enum Event {
         result: ServiceResult<ArtistDetail>,
     },
     Queue(ServiceResult<QueueSnapshot>),
+    Lyrics {
+        track_uri: String,
+        result: ServiceResult<Lyrics>,
+    },
     Palette {
         artwork_url: String,
         scheme: Box<Scheme>,

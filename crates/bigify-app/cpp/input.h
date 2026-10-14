@@ -13,6 +13,8 @@ void bigifyPostAction(std::int32_t action, bool pressed, bool autorepeat);
 
 // Watch all input reaching the application and keep `target`'s `inputMode`
 // property at "gamepad" (events from bigifyPostAction) or "keyboard"
-// (physical keys, mouse clicks/movement, wheel, touch). QML uses it to show
-// matching button hints. Must be called on the GUI thread.
+// (physical keys, mouse clicks/movement, wheel, touch), and increment its
+// `inputSerial` property on every deliberate input. QML uses these to show
+// matching button hints and to detect inactivity. Must be called on the GUI
+// thread.
 void bigifyInstallInputModeFilter(QObject &target);

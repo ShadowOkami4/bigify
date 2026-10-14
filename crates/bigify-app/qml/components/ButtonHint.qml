@@ -5,8 +5,8 @@ import Bigify
 // button glyphs (Steam Deck / Xbox / PlayStation / Nintendo labels) after
 // controller input, key caps after keyboard or mouse input.
 //
-// Actions: select, back, playPause, more, prevNext, volume, nowPlaying,
-// upNext, seek.
+// Actions: select, back, playPause, more, lyrics, prevNext, volume,
+// nowPlaying, upNext, seek.
 Row {
     id: root
     property string action: ""
@@ -43,6 +43,7 @@ Row {
             case "back": return [{ text: faces[1], round: true }]
             case "playPause": return [{ text: faces[2], round: true }]
             case "more": return [{ text: faces[3], round: true }]
+            case "lyrics": return [{ text: faces[3], round: true }]
             case "prevNext": return [{ text: shoulders[0] }, { text: shoulders[1] }]
             case "volume": return [{ text: shoulders[2] }, { text: shoulders[3] }]
             case "nowPlaying": return family === "nintendo" ? [{ text: "+", round: true }]
@@ -57,6 +58,7 @@ Row {
             case "back": return [{ text: "Esc" }]
             case "playPause": return [{ text: "Ctrl" }, { text: "P" }]
             case "more": return [{ text: "Q", round: true }]
+            case "lyrics": return [{ text: "L", round: true }]
             case "prevNext": return [{ text: "Ctrl" }, { icon: "back", round: true }, { icon: "forward", round: true }]
             case "volume": return [{ text: "Ctrl" }, { icon: "up", round: true }, { icon: "down", round: true }]
             case "nowPlaying": return [{ text: "F2" }]

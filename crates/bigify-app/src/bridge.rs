@@ -85,6 +85,8 @@ pub mod qobject {
         /// "gamepad" or "keyboard" (keyboard, mouse, touch): which button
         /// hints to show. Kept current by the C++ input-mode filter.
         #[qproperty(QString, input_mode, cxx_name = "inputMode")]
+        /// Incremented on every deliberate input (see cpp/input.cpp).
+        #[qproperty(i32, input_serial, cxx_name = "inputSerial")]
         /// Library access via the user's own Spotify app, as JSON
         /// `{status, message}`; status is "notConfigured", "setup",
         /// "connected" or "error".
@@ -156,6 +158,9 @@ pub mod qobject {
         fn load_artist(self: Pin<&mut Self>, uri: &QString);
         #[qinvokable]
         fn load_queue(self: Pin<&mut Self>);
+        /// Fetch lyrics for the current track (LRCLIB).
+        #[qinvokable]
+        fn load_lyrics(self: Pin<&mut Self>);
 
         /// Update one setting (`value_json` is a JSON value). Returns false
         /// if the key or value is invalid.
@@ -190,6 +195,10 @@ pub mod qobject {
         fn artist_loaded(self: Pin<&mut Self>, uri: QString, json: QString);
         #[qsignal]
         fn artist_failed(self: Pin<&mut Self>, uri: QString, kind: QString, message: QString);
+        #[qsignal]
+        fn lyrics_loaded(self: Pin<&mut Self>, uri: QString, json: QString);
+        #[qsignal]
+        fn lyrics_failed(self: Pin<&mut Self>, uri: QString, kind: QString, message: QString);
         #[qsignal]
         fn queue_loaded(self: Pin<&mut Self>, json: QString);
         #[qsignal]
@@ -309,6 +318,7 @@ pub struct BackendRust {
     design_preview: bool,
     dev_json: QString,
     input_mode: QString,
+    input_serial: i32,
     library_access: QString,
     controller_family: QString,
 
@@ -351,6 +361,7 @@ impl Default for BackendRust {
             design_preview: false,
             dev_json: QString::from("{}"),
             input_mode: QString::from("keyboard"),
+            input_serial: 0,
             library_access: QString::from(r#"{"status":"notConfigured","message":""}"#),
             controller_family: QString::from("xbox"),
             playback: PlaybackState::new(),
@@ -741,6 +752,15 @@ impl qobject::Backend {
                     }
                 }
             }
+            Event::Lyrics { track_uri, result } => {
+                let u = QString::from(track_uri.as_str());
+                match result {
+                    Ok(l) => self.lyrics_loaded(u, json(&l)),
+                    Err(e) => {
+                        self.lyrics_failed(u, error_kind(&e), QString::from(e.message.as_str()))
+                    }
+                }
+            }
             Event::Queue(Ok(q)) => self.queue_loaded(json(&q)),
             Event::Queue(Err(e)) => {
                 self.queue_failed(error_kind(&e), QString::from(e.message.as_str()))
@@ -982,6 +1002,19 @@ impl qobject::Backend {
     pub fn load_artist(self: Pin<&mut Self>, uri: &QString) {
         send(Command::LoadArtist {
             uri: uri.to_string(),
+        });
+    }
+
+    pub fn load_lyrics(self: Pin<&mut Self>) {
+        let Some(track) = self.rust().playback.track.clone() else {
+            return;
+        };
+        send(Command::LoadLyrics {
+            track_uri: track.uri,
+            title: track.title,
+            artist: track.artists.first().cloned().unwrap_or_default(),
+            album: track.album.unwrap_or_default(),
+            duration_ms: track.duration_ms,
         });
     }
 

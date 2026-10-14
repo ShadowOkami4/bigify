@@ -5,9 +5,123 @@ import Bigify
 // Now Playing — Bigify's signature screen. Artwork-led, immersive, with the
 // transport controls front and centre. Shows only confirmed information:
 // no progress without a duration, no metadata the engine didn't report.
+//
+// Immersive mode: after a few seconds without input while music plays, the
+// controls fade away, leaving artwork, title and progress (or lyrics). The
+// first navigation key only wakes the UI; media keys keep working.
 FocusScope {
     id: root
     signal openQueue()
+
+    // ---- Immersive mode -------------------------------------------------
+    property bool immersive: false
+    property Item focusBeforeImmersive: null
+    readonly property real chromeOpacity: immersive ? 0 : 1
+
+    function enterImmersive() {
+        if (immersive || !root.activeFocus || !root.hasTrack) return
+        focusBeforeImmersive = root.Window.activeFocusItem
+        immersive = true
+        waker.forceActiveFocus()
+    }
+    function exitImmersive() {
+        if (!immersive) return
+        immersive = false
+        if (focusBeforeImmersive && focusBeforeImmersive.visible) focusBeforeImmersive.forceActiveFocus()
+        else playPause.forceActiveFocus()
+        focusBeforeImmersive = null
+        idleTimer.restart()
+    }
+
+    Timer {
+        id: idleTimer
+        interval: 6000
+        running: root.enabled && root.activeFocus && Backend.isPlaying && !root.immersive
+        onTriggered: root.enterImmersive()
+    }
+    Connections {
+        target: Backend
+        function onInputSerialChanged() { if (!root.immersive) idleTimer.restart() }
+        function onIsPlayingChanged() { if (!Backend.isPlaying) root.exitImmersive() }
+    }
+    onEnabledChanged: if (!enabled) { immersive = false; focusBeforeImmersive = null }
+
+    // Holds focus while immersive: navigation keys wake the UI and are
+    // consumed; everything else (media keys, volume, lyrics) passes through.
+    Item {
+        id: waker
+        Keys.onPressed: event => {
+            const wake = [Qt.Key_Up, Qt.Key_Down, Qt.Key_Left, Qt.Key_Right, Qt.Key_Return,
+                          Qt.Key_Enter, Qt.Key_Space, Qt.Key_Escape, Qt.Key_Back]
+            if (wake.indexOf(event.key) >= 0) {
+                root.exitImmersive()
+                event.accepted = true
+            } else {
+                event.accepted = false
+            }
+        }
+    }
+    MouseArea {
+        anchors.fill: parent
+        z: 100
+        enabled: root.immersive
+        hoverEnabled: true
+        property point start
+        property bool tracking: false
+        onEnabledChanged: tracking = false
+        onPositionChanged: mouse => {
+            if (!tracking) { start = Qt.point(mouse.x, mouse.y); tracking = true; return }
+            if (Math.abs(mouse.x - start.x) + Math.abs(mouse.y - start.y) > 12) root.exitImmersive()
+        }
+        onPressed: root.exitImmersive()
+    }
+
+    // ---- Lyrics ------------------------------------------------------------
+    property bool lyricsOpen: false
+    property var lyrics: null
+    property string lyricsStatus: "idle"
+    property string lyricsMessage: ""
+    property string lyricsFor: ""
+
+    function toggleLyrics() {
+        lyricsOpen = !lyricsOpen
+        ensureLyrics()
+    }
+    function ensureLyrics() {
+        if (!lyricsOpen || Backend.trackUri === "" || lyricsFor === Backend.trackUri) return
+        lyricsFor = Backend.trackUri
+        lyrics = null
+        lyricsMessage = ""
+        lyricsStatus = "loading"
+        if (Backend.designPreview) {
+            lyrics = PreviewData.lyrics
+            lyricsStatus = "ready"
+            return
+        }
+        Backend.loadLyrics()
+    }
+    Connections {
+        target: Backend
+        function onTrackUriChanged() { root.ensureLyrics() }
+        function onLyricsLoaded(uri, json) {
+            if (uri !== root.lyricsFor) return
+            root.lyrics = JSON.parse(json)
+            root.lyricsStatus = "ready"
+        }
+        function onLyricsFailed(uri, kind, message) {
+            if (uri !== root.lyricsFor) return
+            root.lyricsMessage = message
+            root.lyricsStatus = "error"
+        }
+    }
+
+    Keys.onPressed: event => {
+        const plain = event.modifiers === Qt.NoModifier
+        if (event.key === Qt.Key_Menu || (plain && (event.key === Qt.Key_L || event.key === Qt.Key_Q))) {
+            root.toggleLyrics()
+            event.accepted = true
+        }
+    }
 
     readonly property bool hasTrack: Backend.hasTrack
     readonly property bool loading: Backend.playbackStatus === "loading"
@@ -99,7 +213,7 @@ FocusScope {
                 kind: "track"
                 radius: Theme.shape.extraExtraLarge
                 // Expressive but restrained: the art settles slightly when paused.
-                scale: Backend.isPlaying || Theme.reducedMotion ? 1.0 : 0.94
+                scale: Theme.reducedMotion ? 1.0 : (!Backend.isPlaying ? 0.94 : (root.immersive ? 1.04 : 1.0))
                 Behavior on scale { NumberAnimation { duration: Theme.motion.slow; easing.type: Easing.OutBack; easing.overshoot: Theme.motion.springOvershoot } }
             }
         }
@@ -111,6 +225,8 @@ FocusScope {
 
             // Status chip: confirmed playback state.
             Rectangle {
+                opacity: root.chromeOpacity
+                Behavior on opacity { NumberAnimation { duration: Theme.motion.fadeLong * 2 } }
                 height: Theme.dp(48)
                 width: statusRow.implicitWidth + Theme.space.xxl
                 radius: height / 2
@@ -136,6 +252,29 @@ FocusScope {
 
             Text {
                 width: parent.width
+                visible: root.lyricsOpen
+                text: Backend.trackTitle + (Backend.trackArtists ? "  ·  " + Backend.trackArtists : "")
+                color: Theme.surfaceContent
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.type.titleLarge
+                font.weight: Font.Bold
+                elide: Text.ElideRight
+            }
+            LyricsView {
+                id: lyricsView
+                visible: root.lyricsOpen
+                width: parent.width
+                height: Math.max(Theme.dp(240), content.height - Theme.dp(650))
+                lyrics: root.lyrics
+                status: root.lyricsStatus
+                message: root.lyricsMessage
+                position: clock.position
+                KeyNavigation.down: progress.visible ? progress : playPause
+            }
+
+            Text {
+                width: parent.width
+                visible: !root.lyricsOpen
                 text: Backend.trackTitle || (root.loading ? qsTr("Loading track…") : "")
                 color: Theme.surfaceContent
                 font.family: Theme.fontFamily
@@ -148,7 +287,7 @@ FocusScope {
             }
             Text {
                 width: parent.width
-                visible: text !== ""
+                visible: text !== "" && !root.lyricsOpen
                 text: Backend.trackArtists
                 color: Theme.surfaceContent
                 font.family: Theme.fontFamily
@@ -158,7 +297,7 @@ FocusScope {
             }
             Text {
                 width: parent.width
-                visible: text !== ""
+                visible: text !== "" && !root.lyricsOpen
                 text: Backend.trackAlbum
                 color: Theme.surfaceContentVariant
                 font.family: Theme.fontFamily
@@ -180,6 +319,7 @@ FocusScope {
                     playing: Backend.isPlaying
                     onSeekRequested: delta => Backend.seek(Math.max(0, Math.min(Backend.durationMs - 1000, clock.position + delta)))
                     KeyNavigation.down: playPause
+                    KeyNavigation.up: lyricsView.visible && lyricsView.activeFocusOnTab ? lyricsView : null
                 }
                 Item {
                     width: parent.width
@@ -214,6 +354,8 @@ FocusScope {
             Row {
                 id: transport
                 spacing: Theme.space.xxl
+                opacity: root.chromeOpacity
+                Behavior on opacity { NumberAnimation { duration: Theme.motion.fadeLong * 2 } }
                 IconButton {
                     id: shuffleButton
                     anchors.verticalCenter: parent.verticalCenter
@@ -280,9 +422,11 @@ FocusScope {
 
             Item { width: 1; height: Theme.space.l }
 
-            // Secondary: queue and volume
+            // Secondary: like, queue, lyrics and volume
             Row {
                 spacing: Theme.space.xl
+                opacity: root.chromeOpacity
+                Behavior on opacity { NumberAnimation { duration: Theme.motion.fadeLong * 2 } }
                 IconButton {
                     id: likeButton
                     anchors.verticalCenter: parent.verticalCenter
@@ -307,6 +451,18 @@ FocusScope {
                     onClicked: root.openQueue()
                     KeyNavigation.up: playPause
                     KeyNavigation.left: likeButton.visible ? likeButton : null
+                    KeyNavigation.right: lyricsButton
+                }
+                PillButton {
+                    id: lyricsButton
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.lyricsOpen ? qsTr("Hide lyrics") : qsTr("Lyrics")
+                    icon: "lyrics"
+                    variant: root.lyricsOpen ? "filled" : "tonal"
+                    height_: Theme.size.buttonSmall
+                    onClicked: root.toggleLyrics()
+                    KeyNavigation.up: nextButton
+                    KeyNavigation.left: queueButton
                     KeyNavigation.right: volumeDown
                 }
                 Item { width: Theme.space.xl; height: 1 }
@@ -318,6 +474,7 @@ FocusScope {
                     accessibleName: qsTr("Volume down")
                     onClicked: Backend.stepVolume(-0.05)
                     KeyNavigation.up: nextButton
+                    KeyNavigation.left: lyricsButton
                     KeyNavigation.right: volumeUp
                 }
                 Item {
@@ -355,7 +512,10 @@ FocusScope {
         anchors { bottom: parent.bottom; bottomMargin: Theme.dp(22); horizontalCenter: parent.horizontalCenter }
         visible: root.hasTrack
         spacing: Theme.space.xxl
+        opacity: root.chromeOpacity
+        Behavior on opacity { NumberAnimation { duration: Theme.motion.fadeLong * 2 } }
         ButtonHint { action: "playPause"; label: qsTr("Play/Pause") }
+        ButtonHint { action: "lyrics"; label: root.lyricsOpen ? qsTr("Hide lyrics") : qsTr("Lyrics") }
         ButtonHint { action: "prevNext"; label: qsTr("Previous/Next") }
         ButtonHint { action: "volume"; label: qsTr("Volume") }
         ButtonHint { action: "upNext"; label: qsTr("Up next") }

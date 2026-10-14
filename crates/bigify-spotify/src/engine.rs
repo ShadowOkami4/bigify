@@ -39,7 +39,7 @@ use tokio::time::Instant;
 use crate::artwork::{self, PaletteCache};
 use crate::userauth::{self, SetupEvent, SetupServer, UserAuth};
 use crate::webapi::WebApi;
-use crate::{metadata, player_events};
+use crate::{lyrics, metadata, player_events};
 
 /// Receives every event; must be cheap and non-blocking (the UI bridge
 /// queues it onto the Qt thread).
@@ -832,6 +832,25 @@ impl Engine {
                     sink(Event::Artist { uri, result });
                 });
             }
+            Command::LoadLyrics {
+                track_uri,
+                title,
+                artist,
+                album,
+                duration_ms,
+            } => {
+                let session = self.session.clone();
+                tokio::spawn(async move {
+                    let query = lyrics::Query {
+                        title: &title,
+                        artist: &artist,
+                        album: &album,
+                        duration_ms,
+                    };
+                    let result = lyrics::fetch(&session, &query).await;
+                    sink(Event::Lyrics { track_uri, result });
+                });
+            }
             Command::LoadQueue => {
                 tokio::spawn(async move {
                     let result = match web {
@@ -973,6 +992,7 @@ fn command_name(cmd: &Command) -> &'static str {
         Command::LoadCollection { .. } => "LoadCollection",
         Command::LoadArtist { .. } => "LoadArtist",
         Command::LoadQueue => "LoadQueue",
+        Command::LoadLyrics { .. } => "LoadLyrics",
         Command::LoadPalette { .. } => "LoadPalette",
         Command::Shutdown => "Shutdown",
     }

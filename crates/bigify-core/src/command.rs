@@ -91,6 +91,14 @@ pub enum Command {
         uri: String,
     },
     LoadQueue,
+    /// Fetch lyrics for a track (from LRCLIB, only on request).
+    LoadLyrics {
+        track_uri: String,
+        title: String,
+        artist: String,
+        album: String,
+        duration_ms: u32,
+    },
     /// Compute the dynamic color palette for an artwork URL.
     LoadPalette {
         artwork_url: String,

@@ -10,6 +10,7 @@ const QML_FILES: &[&str] = &[
     "qml/components/Icon.qml",
     "qml/components/IconButton.qml",
     "qml/components/LoadingIndicator.qml",
+    "qml/components/LyricsView.qml",
     "qml/components/LogoMark.qml",
     "qml/components/MediaCard.qml",
     "qml/components/MiniPlayer.qml",

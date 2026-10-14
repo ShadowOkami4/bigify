@@ -11,7 +11,7 @@ naming; PlayStation and Steam Deck buttons map by position.
 | A | Select / activate | Enter, Space |
 | B | Back | Esc |
 | X | Play / pause (anywhere) | Ctrl+P, Media Play/Pause |
-| Y | More: add the focused track to the queue | Q, Menu key |
+| Y | More: add the focused track to the queue; on Now Playing: lyrics | Q, Menu key; L for lyrics |
 | LB / RB | Previous / next track | Ctrl+← / Ctrl+→, Media Previous / Next |
 | LT / RT | Volume down / up | Ctrl+↓ / Ctrl+↑, Volume keys |
 | Start (☰) | Open / close Now Playing | F2 |
@@ -56,6 +56,10 @@ through MPRIS (`org.mpris.MediaPlayer2.Bigify`). Try it with
   Back never exits the app; use *Settings → Exit Bigify*.
 - **Overlays** (Now Playing, queue) remember what had focus and restore it
   when closed.
+- **Immersive Now Playing.** After 6 s without input while music plays, the
+  controls fade out and only artwork, title and progress (or lyrics) remain.
+  The first arrow/A/B press just brings the controls back; play/pause,
+  previous/next, volume and lyrics keep working without waking.
 - **Mini player.** Down from the bottom of a page focuses the mini player;
   A opens Now Playing; Up returns to the page.
 

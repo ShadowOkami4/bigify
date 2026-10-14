@@ -162,6 +162,24 @@ pub struct ArtistDetail {
     pub singles: Vec<MediaItem>,
 }
 
+/// Song lyrics. `time_ms` is set for synced (LRC) lyrics.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Lyrics {
+    pub lines: Vec<LyricLine>,
+    pub synced: bool,
+    pub instrumental: bool,
+    /// Attribution shown in the UI.
+    pub source: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LyricLine {
+    pub time_ms: Option<u32>,
+    pub text: String,
+}
+
 /// The current track as reported by the playback engine.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]

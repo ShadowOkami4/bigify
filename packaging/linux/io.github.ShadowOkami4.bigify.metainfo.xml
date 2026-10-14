@@ -52,6 +52,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.1.3" date="2026-10-14">
+      <description>
+        <p>Fixes Search and Library failing with "unexpected response" for playlists; lyrics from LRCLIB in Now Playing; immersive Now Playing that hides the controls when idle; focus outline no longer cut off at the top of track lists.</p>
+      </description>
+    </release>
     <release version="0.1.2" date="2026-10-14">
       <description>
         <p>Home, Search and Library work again through a one-time library access setup with your own Spotify app, because Spotify rate-limits third-party use of its built-in access.</p>

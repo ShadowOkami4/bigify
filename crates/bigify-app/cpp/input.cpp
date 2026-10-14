@@ -52,6 +52,16 @@ protected:
         if (!watched->isWindowType())
             return false;
         switch (event->type()) {
+        case QEvent::KeyPress:
+        case QEvent::MouseButtonPress:
+        case QEvent::Wheel:
+        case QEvent::TouchBegin:
+            bump();
+            break;
+        default:
+            break;
+        }
+        switch (event->type()) {
         case QEvent::KeyPress: {
             const auto *key = static_cast<QKeyEvent *>(event);
             setMode(key->nativeScanCode() == kGamepadScanCode ? "gamepad" : "keyboard");
@@ -67,8 +77,10 @@ protected:
             // resting cursor); require a deliberate movement.
             const auto *mouse = static_cast<QMouseEvent *>(event);
             const QPointF pos = mouse->globalPosition();
-            if (m_hasLastPos && (pos - m_lastPos).manhattanLength() > 12.0)
+            if (m_hasLastPos && (pos - m_lastPos).manhattanLength() > 12.0) {
                 setMode("keyboard");
+                bump();
+            }
             m_lastPos = pos;
             m_hasLastPos = true;
             break;
@@ -80,6 +92,13 @@ protected:
     }
 
 private:
+    // Any deliberate input: lets QML track inactivity (immersive Now Playing).
+    void bump()
+    {
+        if (m_target)
+            m_target->setProperty("inputSerial", ++m_serial);
+    }
+
     void setMode(const char *mode)
     {
         if (m_mode == mode || !m_target)
@@ -90,6 +109,7 @@ private:
 
     QPointer<QObject> m_target;
     const char *m_mode = nullptr;
+    int m_serial = 0;
     QPointF m_lastPos;
     bool m_hasLastPos = false;
 };

@@ -8,6 +8,7 @@
 mod artwork;
 mod engine;
 mod errors;
+mod lyrics;
 mod metadata;
 mod player_events;
 pub mod userauth;
