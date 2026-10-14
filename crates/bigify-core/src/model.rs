@@ -152,6 +152,16 @@ pub struct CollectionDetail {
     pub total_tracks: Option<u32>,
 }
 
+/// Artist page: portrait, popular tracks and releases.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtistDetail {
+    pub item: MediaItem,
+    pub top_tracks: Vec<MediaItem>,
+    pub albums: Vec<MediaItem>,
+    pub singles: Vec<MediaItem>,
+}
+
 /// The current track as reported by the playback engine.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]

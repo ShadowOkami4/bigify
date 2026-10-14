@@ -37,7 +37,16 @@ Window {
         property bool nowPlayingOpen: false
         property bool queueOpen: false
         property bool everConnected: false
-        property var details: ({ home: null, search: null, library: null })
+        // Per-section stack of detail pages (album, playlist, artist); Back pops.
+        property var detailStacks: ({ home: [], search: [], library: [] })
+        readonly property var details: {
+            const d = {}
+            for (const k in detailStacks) {
+                const s = detailStacks[k]
+                d[k] = s.length > 0 ? s[s.length - 1] : null
+            }
+            return d
+        }
         property Item focusBeforeOverlay: null
 
         readonly property var destinations: [
@@ -51,10 +60,14 @@ Window {
         readonly property bool showSignIn: !Backend.designPreview && Backend.authState !== "connected"
             && !(everConnected && (Backend.authState === "reconnecting" || Backend.authState === "connecting"))
 
+        // Push `item` as the section's detail page, or pop with null.
         function setDetail(sectionId, item) {
-            const d = Object.assign({}, details)
-            d[sectionId] = item
-            details = d
+            const stacks = Object.assign({}, detailStacks)
+            const stack = (stacks[sectionId] || []).slice()
+            if (item === null) stack.pop()
+            else if (stack.length === 0 || stack[stack.length - 1].uri !== item.uri) stack.push(item)
+            stacks[sectionId] = stack.slice(-8)
+            detailStacks = stacks
         }
 
         function activate(item, sectionId) {
@@ -62,6 +75,7 @@ Window {
             switch (item.kind) {
             case "album":
             case "playlist":
+            case "artist":
                 setDetail(sectionId, item)
                 break
             case "track":
@@ -71,7 +85,7 @@ Window {
             case "collection":
                 section = "library"
                 break
-            default:            // artist, show: play as a context
+            default:            // show etc.: play as a context
                 Backend.playUri(item.uri, "")
             }
         }
@@ -376,12 +390,14 @@ Window {
             if (start === "nowPlaying") app.openNowPlaying()
             else if (start === "queue") { app.openNowPlaying(); app.openQueue() }
             else if (start === "rail") rail.forceActiveFocus()
+            else if (start === "artist" && Backend.designPreview) setDetail("home", PreviewData.homeSections[3].items[0])
+            else if (start === "album" && Backend.designPreview) setDetail("home", PreviewData.homeSections[4].items[0])
             else if (start && start !== "home") app.section = start
         }
     }
 
     // A page for one rail section, holding its root screen and an optional
-    // album/playlist detail page on top.
+    // album/playlist/artist detail page on top.
     component SectionPage: FocusScope {
         id: page
         required property string sectionId
@@ -405,9 +421,22 @@ Window {
             anchors.fill: parent
             active: page.detailItem !== null
             focus: active
-            sourceComponent: CollectionScreen {
+            sourceComponent: page.detailItem && page.detailItem.kind === "artist" ? artistPage : collectionPage
+        }
+        Component {
+            id: collectionPage
+            CollectionScreen {
                 item: page.detailItem
                 focus: true
+                onItemActivated: item => app.activate(item, page.sectionId)
+            }
+        }
+        Component {
+            id: artistPage
+            ArtistScreen {
+                item: page.detailItem
+                focus: true
+                onItemActivated: item => app.activate(item, page.sectionId)
             }
         }
     }

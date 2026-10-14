@@ -16,7 +16,7 @@ use std::time::Duration;
 
 use bigify_core::color::Scheme;
 use bigify_core::error::{ErrorKind, ServiceError};
-use bigify_core::model::MediaKind;
+use bigify_core::model::{ArtistDetail, MediaKind};
 use bigify_core::playback::{PlayerUpdate, RepeatMode};
 use bigify_core::settings::{AudioQuality, Settings};
 use bigify_core::{AuthState, Command, Event, LibraryKind};
@@ -707,6 +707,16 @@ impl Engine {
                     sink(Event::Collection { uri, result });
                 });
             }
+            Command::LoadArtist { uri } => {
+                let session = self.session.clone();
+                tokio::spawn(async move {
+                    let result = match web {
+                        Ok(web) => load_artist(&session, &web, &uri).await,
+                        Err(e) => Err(e),
+                    };
+                    sink(Event::Artist { uri, result });
+                });
+            }
             Command::LoadQueue => {
                 tokio::spawn(async move {
                     let result = match web {
@@ -762,6 +772,34 @@ impl Engine {
     }
 }
 
+/// Artist page: header and popular tracks from librespot, releases from the
+/// Web API (one request with names and artwork), falling back to librespot
+/// album metadata when the Web API refuses.
+async fn load_artist(
+    session: &Session,
+    web: &WebApi,
+    uri: &str,
+) -> Result<ArtistDetail, ServiceError> {
+    let (meta, releases) = tokio::join!(metadata::artist(session, uri), web.artist_albums(uri));
+    let meta = meta?;
+    let (albums, singles) = match releases {
+        Ok(r) => r,
+        Err(e) => {
+            log::debug!("artist releases via Web API failed: {e}");
+            tokio::join!(
+                metadata::albums(session, meta.album_uris),
+                metadata::albums(session, meta.single_uris)
+            )
+        }
+    };
+    Ok(ArtistDetail {
+        item: meta.item,
+        top_tracks: meta.top_tracks,
+        albums,
+        singles,
+    })
+}
+
 /// Command name for logs, without payloads (search queries are personal).
 fn command_name(cmd: &Command) -> &'static str {
     match cmd {
@@ -783,6 +821,7 @@ fn command_name(cmd: &Command) -> &'static str {
         Command::Search { .. } => "Search",
         Command::LoadLibrary { .. } => "LoadLibrary",
         Command::LoadCollection { .. } => "LoadCollection",
+        Command::LoadArtist { .. } => "LoadArtist",
         Command::LoadQueue => "LoadQueue",
         Command::LoadPalette { .. } => "LoadPalette",
         Command::Shutdown => "Shutdown",

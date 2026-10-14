@@ -10,7 +10,8 @@ use bigify_core::model::{join_names, CollectionDetail, MediaItem, MediaKind};
 use futures_util::stream::{self, StreamExt};
 use librespot::core::session::Session;
 use librespot::core::SpotifyUri;
-use librespot::metadata::{Metadata, Playlist, Track};
+use librespot::metadata::image::Image;
+use librespot::metadata::{Album, Artist, Metadata, Playlist, Track};
 
 use crate::errors::from_librespot;
 
@@ -18,7 +19,12 @@ use crate::errors::from_librespot;
 pub const MAX_TRACKS: usize = 100;
 
 fn image_url(track: &Track) -> Option<String> {
-    let mut covers: Vec<_> = track.album.covers.iter().collect();
+    cdn_url(&track.album.covers)
+}
+
+/// Smallest image at least 300 px wide (else the largest), as a CDN URL.
+fn cdn_url(images: &[Image]) -> Option<String> {
+    let mut covers: Vec<_> = images.iter().collect();
     covers.sort_by_key(|c| c.width);
     let pick = covers
         .iter()
@@ -92,4 +98,73 @@ pub async fn playlist(session: &Session, uri: &str) -> ServiceResult<CollectionD
         item,
         tracks,
     })
+}
+
+/// Artist header and popular tracks via librespot (the Web API's top-tracks
+/// endpoint is no longer available). Release URIs feed the [`albums`]
+/// fallback.
+pub struct ArtistMetadata {
+    pub item: MediaItem,
+    pub top_tracks: Vec<MediaItem>,
+    pub album_uris: Vec<SpotifyUri>,
+    pub single_uris: Vec<SpotifyUri>,
+}
+
+/// Popular tracks shown on an artist page.
+pub const TOP_TRACKS: usize = 5;
+
+pub async fn artist(session: &Session, uri: &str) -> ServiceResult<ArtistMetadata> {
+    let id = SpotifyUri::from_uri(uri)
+        .map_err(|_| ServiceError::new(ErrorKind::NotFound, "Invalid artist"))?;
+    let artist = Artist::get(session, &id).await.map_err(from_librespot)?;
+    if artist.name.trim().is_empty() {
+        return Err(ServiceError::new(
+            ErrorKind::NotFound,
+            "This artist isn't available.",
+        ));
+    }
+    let top_ids: Vec<SpotifyUri> = artist
+        .top_tracks
+        .for_country(&session.country())
+        .iter()
+        .take(TOP_TRACKS)
+        .cloned()
+        .collect();
+    let top_tracks: Vec<MediaItem> = stream::iter(top_ids)
+        .map(|id| async move { Track::get(session, &id).await })
+        .buffered(8)
+        .filter_map(|r| async move { r.map_err(|e| log::debug!("top track skipped: {e}")).ok() })
+        .filter_map(|t| async move { track_item(&t, uri) })
+        .collect()
+        .await;
+
+    let mut item = MediaItem::new(uri, MediaKind::Artist, artist.name.trim());
+    item.subtitle = "Artist".into();
+    item.artwork_url = cdn_url(&artist.portraits).or_else(|| cdn_url(&artist.portrait_group));
+    Ok(ArtistMetadata {
+        item,
+        top_tracks,
+        album_uris: artist.albums_current().take(20).cloned().collect(),
+        single_uris: artist.singles_current().take(20).cloned().collect(),
+    })
+}
+
+/// Describe releases through librespot (fallback when the Web API refuses).
+pub async fn albums(session: &Session, uris: Vec<SpotifyUri>) -> Vec<MediaItem> {
+    stream::iter(uris)
+        .map(|id| async move { Album::get(session, &id).await })
+        .buffered(8)
+        .filter_map(|r| async move {
+            let album = r.map_err(|e| log::debug!("release skipped: {e}")).ok()?;
+            let uri = album.id.to_uri().ok()?;
+            if album.name.is_empty() {
+                return None;
+            }
+            let mut item = MediaItem::new(uri, MediaKind::Album, album.name.clone());
+            item.subtitle = album.date.0.year().to_string();
+            item.artwork_url = cdn_url(&album.covers);
+            Some(item)
+        })
+        .collect()
+        .await
 }

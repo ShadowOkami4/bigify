@@ -41,7 +41,7 @@ The mouse works everywhere (click to select) but is never required.
 - **Rows and grids.** Arrows move within a row. Up and Down move between
   rows, and each row remembers its position when you come back.
 - **Back (B / Esc)** closes the topmost layer in this order: queue, Now
-  Playing, album/playlist page, content (to the rail), section (to Home).
+  Playing, album, playlist or artist page (one level at a time), content (to the rail), section (to Home).
   Back never exits the app; use *Settings → Exit Bigify*.
 - **Overlays** (Now Playing, queue) remember what had focus and restore it
   when closed.

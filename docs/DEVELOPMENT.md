@@ -84,7 +84,7 @@ Headless screenshots (Xvfb + Mesa) for any screen and resolution:
 ci/run.sh ci/screenshot.sh home 1920x1080
 ci/run.sh ci/screenshot.sh nowPlaying 3840x2160
 ci/run.sh ci/screenshot.sh queue 1280x800    # Steam Deck
-# screens: home, search, library, settings, nowPlaying, queue, rail
+# screens: home, search, library, settings, nowPlaying, queue, rail, artist, album
 ```
 
 Images are written to `screenshots/`, which git ignores.

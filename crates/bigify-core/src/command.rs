@@ -73,6 +73,9 @@ pub enum Command {
     LoadCollection {
         uri: String,
     },
+    LoadArtist {
+        uri: String,
+    },
     LoadQueue,
     /// Compute the dynamic color palette for an artwork URL.
     LoadPalette {

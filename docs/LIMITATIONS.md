@@ -53,7 +53,8 @@ clients have done (the maintainers chose this option; see
 | Album detail | ✅ | Web API | |
 | Playlist detail (owned) | ✅ | Web API | First 100 tracks are listed; Play plays everything |
 | Playlist detail (followed / editorial) | ⚠️ | librespot metadata fallback | Web API withholds contents; Bigify reads the playlist via librespot and lists the first 100 tracks |
-| Artist page (top tracks, discography) | ❌ (planned) | — | `artists/{id}/top-tracks` was removed; selecting an artist plays the artist context instead |
+| Artist page: portrait, popular tracks | ⚠️ | librespot metadata | `artists/{id}/top-tracks` was removed from the Web API; librespot reads the same data Spotify clients use (top 5 for your country) |
+| Artist page: albums, singles & EPs | ⚠️ | Web API `artists/{id}/albums`, librespot fallback | Falls back to librespot album metadata if the Web API refuses |
 | Queue: view | ⚠️ | Web API `GET /me/player/queue` | Read-only |
 | Queue: add | ⚠️ | Web API `POST /me/player/queue` | |
 | Queue: reorder / remove | ❌ | — | No public interface |

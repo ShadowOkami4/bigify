@@ -48,6 +48,11 @@ QtObject {
                  tracks: many("track", "Sample Track", item.subtitle || "Sample Artist", 12) }
     }
 
+    function artistFor(item) {
+        return { item: item, topTracks: many("track", "Popular Track", item.title, 5),
+                 albums: many("album", "Album", "2024", 8), singles: many("album", "Single", "2025", 6) }
+    }
+
     readonly property var queue: ({ current: make("track", 1, "Sample Track 1", "Sample Artist"),
                                     upcoming: many("track", "Up Next Track", "Sample Artist", 8) })
 }

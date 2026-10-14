@@ -11,8 +11,13 @@ FocusScope {
     property string errorMessage: ""
 
     readonly property var shown: detail ? detail.item : item
+    signal itemActivated(var item)
+
+    property string loadedUri: ""
 
     function load() {
+        if (!item || !item.uri || item.uri === loadedUri) return
+        loadedUri = item.uri
         detail = null
         status = "loading"
         if (Backend.designPreview) {
@@ -24,6 +29,7 @@ FocusScope {
     }
 
     Component.onCompleted: load()
+    onItemChanged: load()
 
     Connections {
         target: Backend
@@ -116,7 +122,7 @@ FocusScope {
         title: root.status === "error" ? qsTr("Couldn't load this") : (root.status === "ready" ? qsTr("No tracks") : "")
         message: root.status === "error" ? root.errorMessage : ""
         errorKind: root.errorKind
-        onRetry: root.load()
+        onRetry: { root.loadedUri = ""; root.load() }
     }
 
     ListView {

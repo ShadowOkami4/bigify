@@ -471,6 +471,30 @@ pub fn parse_playlist_detail(body: &[u8]) -> ServiceResult<CollectionDetail> {
     })
 }
 
+/// Split an artist's releases into (albums incl. compilations, singles/EPs).
+/// Subtitles show the release year rather than repeating the artist's name.
+pub fn parse_artist_albums(body: &[u8]) -> ServiceResult<(Vec<MediaItem>, Vec<MediaItem>)> {
+    let p: Paging<Option<AlbumRef>> = parse(body)?;
+    let mut albums = Vec::new();
+    let mut singles = Vec::new();
+    for a in p.items.iter().flatten() {
+        let Some(mut item) = album_item(a) else {
+            continue;
+        };
+        item.subtitle = a
+            .release_date
+            .as_deref()
+            .and_then(|d| d.get(..4))
+            .unwrap_or("")
+            .to_owned();
+        match a.album_type.as_deref() {
+            Some("single") => singles.push(item),
+            _ => albums.push(item),
+        }
+    }
+    Ok((dedup(albums), dedup(singles)))
+}
+
 pub fn parse_queue(body: &[u8]) -> ServiceResult<QueueSnapshot> {
     let q: QueueResponse = parse(body)?;
     Ok(QueueSnapshot {
@@ -668,6 +692,20 @@ impl WebApi {
             uri_id(uri).ok_or_else(|| ServiceError::new(ErrorKind::NotFound, "Invalid artist"))?;
         let a: Artist = self.get_json(&format!("/artists/{id}")).await?;
         artist_item(&a).ok_or_else(|| ServiceError::internal("Artist is missing its name"))
+    }
+
+    pub async fn artist_albums(
+        &self,
+        uri: &str,
+    ) -> ServiceResult<(Vec<MediaItem>, Vec<MediaItem>)> {
+        let id =
+            uri_id(uri).ok_or_else(|| ServiceError::new(ErrorKind::NotFound, "Invalid artist"))?;
+        let body = self
+            .get(&format!(
+                "/artists/{id}/albums?include_groups=album,single,compilation&limit={PAGE_SIZE}"
+            ))
+            .await?;
+        parse_artist_albums(&body)
     }
 
     pub async fn queue(&self) -> ServiceResult<QueueSnapshot> {
@@ -871,6 +909,21 @@ mod tests {
         let d = parse_album_detail(body.as_bytes()).unwrap();
         assert_eq!(d.description, "Album · 2019 · 1 song");
         assert!(!d.truncated);
+    }
+
+    #[test]
+    fn artist_albums_split_by_type() {
+        let body = br#"{"items": [
+            {"uri": "spotify:album:a", "name": "LP", "album_type": "album", "release_date": "2020-01-01"},
+            {"uri": "spotify:album:s", "name": "Single", "album_type": "single", "release_date": "2021"},
+            {"uri": "spotify:album:c", "name": "Best Of", "album_type": "compilation"},
+            null
+        ]}"#;
+        let (albums, singles) = parse_artist_albums(body).unwrap();
+        assert_eq!(albums.len(), 2);
+        assert_eq!(albums[0].subtitle, "2020");
+        assert_eq!(singles.len(), 1);
+        assert_eq!(singles[0].subtitle, "2021");
     }
 
     #[test]

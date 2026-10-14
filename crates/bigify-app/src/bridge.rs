@@ -125,6 +125,8 @@ pub mod qobject {
         #[qinvokable]
         fn load_collection(self: Pin<&mut Self>, uri: &QString);
         #[qinvokable]
+        fn load_artist(self: Pin<&mut Self>, uri: &QString);
+        #[qinvokable]
         fn load_queue(self: Pin<&mut Self>);
 
         /// Update one setting (`value_json` is a JSON value). Returns false
@@ -156,6 +158,10 @@ pub mod qobject {
         fn collection_loaded(self: Pin<&mut Self>, uri: QString, json: QString);
         #[qsignal]
         fn collection_failed(self: Pin<&mut Self>, uri: QString, kind: QString, message: QString);
+        #[qsignal]
+        fn artist_loaded(self: Pin<&mut Self>, uri: QString, json: QString);
+        #[qsignal]
+        fn artist_failed(self: Pin<&mut Self>, uri: QString, kind: QString, message: QString);
         #[qsignal]
         fn queue_loaded(self: Pin<&mut Self>, json: QString);
         #[qsignal]
@@ -566,6 +572,15 @@ impl qobject::Backend {
                     }
                 }
             }
+            Event::Artist { uri, result } => {
+                let u = QString::from(uri.as_str());
+                match result {
+                    Ok(d) => self.artist_loaded(u, json(&d)),
+                    Err(e) => {
+                        self.artist_failed(u, error_kind(&e), QString::from(e.message.as_str()))
+                    }
+                }
+            }
             Event::Queue(Ok(q)) => self.queue_loaded(json(&q)),
             Event::Queue(Err(e)) => {
                 self.queue_failed(error_kind(&e), QString::from(e.message.as_str()))
@@ -733,6 +748,12 @@ impl qobject::Backend {
 
     pub fn load_collection(self: Pin<&mut Self>, uri: &QString) {
         send(Command::LoadCollection {
+            uri: uri.to_string(),
+        });
+    }
+
+    pub fn load_artist(self: Pin<&mut Self>, uri: &QString) {
+        send(Command::LoadArtist {
             uri: uri.to_string(),
         });
     }

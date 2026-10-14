@@ -22,6 +22,7 @@ const QML_FILES: &[&str] = &[
     "qml/components/Toast.qml",
     "qml/components/TrackRow.qml",
     "qml/components/WavyProgress.qml",
+    "qml/screens/ArtistScreen.qml",
     "qml/screens/CollectionScreen.qml",
     "qml/screens/HomeScreen.qml",
     "qml/screens/LibraryScreen.qml",
