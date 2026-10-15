@@ -67,6 +67,9 @@ FocusScope {
 
     onKindChanged: ensureLoaded()
 
+    // Developer start screen: focus the first item of the grid.
+    function focusGrid() { grid.forceActiveFocus() }
+
     Connections {
         target: Backend
         function onLibraryLoaded(k, offset, json) {
@@ -152,30 +155,39 @@ FocusScope {
 
         GridView {
             id: grid
+            // Cells are inset so the focus lift and ring of the first
+            // row/column are not clipped.
+            readonly property real inset: Theme.focusGap + Theme.focusWidth + Theme.dp(16)
             anchors.fill: parent
-            anchors.leftMargin: Theme.safeH
+            anchors.leftMargin: Theme.safeH - inset
             visible: root.kind !== "likedSongs" && root.model.count > 0
             clip: true
             model: root.kind !== "likedSongs" ? root.model : null
             cellWidth: Theme.size.card + Theme.space.xxl
             cellHeight: Theme.size.card + Theme.dp(140)
-            topMargin: Theme.dp(16)
+            topMargin: inset
             bottomMargin: Theme.safeV + Theme.size.miniPlayer
             keyNavigationEnabled: true
             highlightRangeMode: GridView.ApplyRange
-            preferredHighlightBegin: Theme.dp(16)
+            preferredHighlightBegin: inset
             preferredHighlightEnd: height - cellHeight - Theme.size.miniPlayer
             highlightMoveDuration: Theme.motion.medium
             boundsBehavior: Flickable.StopAtBounds
             cacheBuffer: cellHeight * 2
             reuseItems: true
             onCurrentIndexChanged: if (currentIndex >= count - 14) root.loadMore(false)
+            // A cleared and refilled model leaves currentIndex at -1, which
+            // would leave nothing focusable.
+            onCountChanged: if (currentIndex < 0 && count > 0) currentIndex = 0
+            onActiveFocusChanged: if (activeFocus && currentIndex < 0 && count > 0) currentIndex = 0
             Keys.onUpPressed: event => {
                 if (currentIndex < Math.floor(width / cellWidth)) chips.forceActiveFocus()
                 else moveCurrentIndexUp()
             }
 
-            delegate: Item {
+            // A FocusScope, so focus reaches the card inside (with a plain
+            // Item the cell itself took focus and no card was highlighted).
+            delegate: FocusScope {
                 id: cell
                 required property var model
                 required property int index
@@ -183,6 +195,7 @@ FocusScope {
                 height: grid.cellHeight
                 focus: GridView.isCurrentItem
                 MediaCard {
+                    x: grid.inset
                     focus: true
                     item: cell.model
                     onActivated: root.itemActivated(cell.model)
@@ -193,8 +206,9 @@ FocusScope {
         ListView {
             id: trackList
             anchors.fill: parent
-            anchors.leftMargin: Theme.safeH
-            anchors.rightMargin: Theme.safeH
+            // Content margins keep the focus ring's sides inside the clip.
+            leftMargin: Theme.safeH
+            rightMargin: Theme.safeH
             visible: root.kind === "likedSongs" && root.model.count > 0
             clip: true
             model: root.kind === "likedSongs" ? root.model : null
@@ -210,6 +224,8 @@ FocusScope {
             boundsBehavior: Flickable.StopAtBounds
             reuseItems: true
             onCurrentIndexChanged: if (currentIndex >= count - 20) root.loadMore(false)
+            onCountChanged: if (currentIndex < 0 && count > 0) currentIndex = 0
+            onActiveFocusChanged: if (activeFocus && currentIndex < 0 && count > 0) currentIndex = 0
             Keys.onUpPressed: event => {
                 if (currentIndex === 0) chips.forceActiveFocus()
                 else decrementCurrentIndex()
@@ -217,13 +233,13 @@ FocusScope {
             delegate: TrackRow {
                 required property var model
                 required property int index
-                width: trackList.width
+                width: trackList.width - trackList.leftMargin - trackList.rightMargin
                 item: model
                 focus: ListView.isCurrentItem
                 onActivated: Backend.playUri("spotify:collection", model.uri)
             }
             footer: Item {
-                width: trackList.width
+                width: trackList.width - trackList.leftMargin - trackList.rightMargin
                 height: Theme.dp(100)
                 LoadingIndicator {
                     anchors.centerIn: parent

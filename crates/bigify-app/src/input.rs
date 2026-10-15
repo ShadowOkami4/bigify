@@ -31,8 +31,8 @@ pub enum Action {
     More = 7,
     Previous = 8,
     Next = 9,
-    VolumeDown = 10,
-    VolumeUp = 11,
+    SeekBack = 10,
+    SeekForward = 11,
     NowPlaying = 12,
     Queue = 13,
 }
@@ -42,12 +42,7 @@ impl Action {
     pub fn repeats(self) -> bool {
         matches!(
             self,
-            Action::Up
-                | Action::Down
-                | Action::Left
-                | Action::Right
-                | Action::VolumeDown
-                | Action::VolumeUp
+            Action::Up | Action::Down | Action::Left | Action::Right
         )
     }
 }
@@ -232,8 +227,8 @@ pub mod gamepad {
             Button::North => Action::More,
             Button::LeftTrigger => Action::Previous,
             Button::RightTrigger => Action::Next,
-            Button::LeftTrigger2 => Action::VolumeDown,
-            Button::RightTrigger2 => Action::VolumeUp,
+            Button::LeftTrigger2 => Action::SeekBack,
+            Button::RightTrigger2 => Action::SeekForward,
             Button::Start => Action::NowPlaying,
             Button::Select => Action::Queue,
             // Mode/Guide belongs to Steam and the system.

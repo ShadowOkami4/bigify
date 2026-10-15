@@ -132,10 +132,10 @@ FocusScope {
     // the design preview has no backend to ask.
     Component.onCompleted: if (Backend.designPreview) SavedState.check([Backend.trackUri])
 
-    // ---- Backdrop: blurred artwork, dimmed for legibility ---------------
+    // ---- Backdrop: blurred, zoomed artwork, dimmed for legibility --------
     Rectangle { anchors.fill: parent; color: Theme.surface }
     Image {
-        id: backdropSource
+        id: backdropImage
         anchors.fill: parent
         source: Backend.artworkUrl
         sourceSize: Qt.size(160, 160)   // tiny decode; it is blurred anyway
@@ -143,10 +143,22 @@ FocusScope {
         asynchronous: true
         visible: false
     }
+    // An Image's own texture is the decoded 160 px bitmap, not the cropped,
+    // screen-filling rendering, so render it into a texture first (small:
+    // it is blurred anyway).
+    ShaderEffectSource {
+        id: backdropSource
+        anchors.fill: parent
+        sourceItem: backdropImage
+        textureSize: Qt.size(320, 320 * height / Math.max(1, width))
+        smooth: true
+        visible: false
+    }
     MultiEffect {
         anchors.fill: parent
+        scale: 1.15                     // zoomed in, hides blurred edges
         source: backdropSource
-        visible: backdropSource.status === Image.Ready
+        visible: backdropImage.status === Image.Ready
         blurEnabled: true
         blur: 1.0
         blurMax: 64
@@ -404,7 +416,7 @@ FocusScope {
                     onClicked: Backend.next()
                     KeyNavigation.right: repeatButton
                     KeyNavigation.up: progress.visible ? progress : null
-                    KeyNavigation.down: volumeDown
+                    KeyNavigation.down: lyricsButton
                 }
                 IconButton {
                     id: repeatButton
@@ -416,13 +428,15 @@ FocusScope {
                     accessibleName: Backend.repeatMode === "track" ? qsTr("Repeat one") : qsTr("Repeat")
                     onClicked: Backend.cycleRepeat()
                     KeyNavigation.up: progress.visible ? progress : null
-                    KeyNavigation.down: volumeUp
+                    KeyNavigation.down: lyricsButton
                 }
             }
 
             Item { width: 1; height: Theme.space.l }
 
-            // Secondary: like, queue, lyrics and volume
+            // Secondary: like, queue and lyrics. Volume has no on-screen control
+            // (like Spotify's TV app): the device's volume keys, Ctrl+Up/Down or
+            // the phone change it, and the volume indicator shows the result.
             Row {
                 spacing: Theme.space.xl
                 opacity: root.chromeOpacity
@@ -463,45 +477,6 @@ FocusScope {
                     onClicked: root.toggleLyrics()
                     KeyNavigation.up: nextButton
                     KeyNavigation.left: queueButton
-                    KeyNavigation.right: volumeDown
-                }
-                Item { width: Theme.space.xl; height: 1 }
-                IconButton {
-                    id: volumeDown
-                    anchors.verticalCenter: parent.verticalCenter
-                    icon: "volumeDown"
-                    size: Theme.dp(64)
-                    accessibleName: qsTr("Volume down")
-                    onClicked: Backend.stepVolume(-0.05)
-                    KeyNavigation.up: nextButton
-                    KeyNavigation.left: lyricsButton
-                    KeyNavigation.right: volumeUp
-                }
-                Item {
-                    width: Theme.dp(260); height: Theme.dp(64)
-                    anchors.verticalCenter: parent.verticalCenter
-                    Accessible.role: Accessible.ProgressBar
-                    Accessible.name: qsTr("Volume %1 percent").arg(Math.round(Backend.volume * 100))
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width; height: Theme.dp(12); radius: height / 2
-                        color: Theme.alpha(Theme.surfaceContent, 0.2)
-                        Rectangle {
-                            width: Math.max(height, parent.width * Backend.volume)
-                            height: parent.height; radius: height / 2
-                            color: root.isPending("volume") ? Theme.alpha(Theme.primary, 0.6) : Theme.primary
-                            Behavior on width { NumberAnimation { duration: Theme.motion.quick } }
-                        }
-                    }
-                }
-                IconButton {
-                    id: volumeUp
-                    anchors.verticalCenter: parent.verticalCenter
-                    icon: "volumeUp"
-                    size: Theme.dp(64)
-                    accessibleName: qsTr("Volume up")
-                    onClicked: Backend.stepVolume(0.05)
-                    KeyNavigation.up: repeatButton
                 }
             }
         }
@@ -517,7 +492,7 @@ FocusScope {
         ButtonHint { action: "playPause"; label: qsTr("Play/Pause") }
         ButtonHint { action: "lyrics"; label: root.lyricsOpen ? qsTr("Hide lyrics") : qsTr("Lyrics") }
         ButtonHint { action: "prevNext"; label: qsTr("Previous/Next") }
-        ButtonHint { action: "volume"; label: qsTr("Volume") }
+        ButtonHint { action: "skip10"; label: qsTr("−10 s / +10 s") }
         ButtonHint { action: "upNext"; label: qsTr("Up next") }
         ButtonHint { action: "back"; label: qsTr("Back") }
     }

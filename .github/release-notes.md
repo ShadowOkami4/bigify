@@ -18,7 +18,7 @@ Full guide, including other distributions and updating: [docs/INSTALL.md](https:
 
 - Sign in from the Spotify app on your phone (no typing on the TV), or with a browser
 - Home, Search, Library, artist, album and playlist pages; save and follow
-- Expressive Now Playing with colors from the album art; Up next queue
+- Expressive Now Playing with colors from the album art, synced lyrics (LRCLIB) and an immersive idle mode; Up next queue
 - Full controller support; media keys and desktop widgets via MPRIS
 
 See [LIMITATIONS.md](https://github.com/ShadowOkami4/bigify/blob/main/docs/LIMITATIONS.md) for what Spotify's interfaces do and don't allow.

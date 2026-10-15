@@ -662,6 +662,7 @@ impl Engine {
             Command::Play
             | Command::Pause
             | Command::Next
+            | Command::SkipForward(_)
             | Command::Previous
             | Command::Seek(_)
             | Command::SetShuffle(_)
@@ -682,6 +683,9 @@ impl Engine {
             Command::Play => spirc.play(),
             Command::Pause => spirc.pause(),
             Command::Next => spirc.next(),
+            // Spirc plays the queue locally, so skipping n times lands on
+            // the n-th upcoming entry, including manually queued songs.
+            Command::SkipForward(n) => (0..n.max(1)).try_for_each(|_| spirc.next()),
             Command::Previous => spirc.prev(),
             Command::Seek(ms) => spirc.set_position_ms(ms),
             Command::SetShuffle(on) => spirc.shuffle(on),
@@ -976,6 +980,7 @@ fn command_name(cmd: &Command) -> &'static str {
         Command::Play => "Play",
         Command::Pause => "Pause",
         Command::Next => "Next",
+        Command::SkipForward(_) => "SkipForward",
         Command::Previous => "Previous",
         Command::Seek(_) => "Seek",
         Command::SetShuffle(_) => "SetShuffle",

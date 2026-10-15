@@ -61,9 +61,26 @@ FocusScope {
         }
     }
 
+    // Developer start screen: sample results with focus on the first one.
+    function previewResults() {
+        query = "sample"
+        runSearch()
+        focusResults()
+    }
+
+    readonly property bool hasResults: root.status === "ready" && root.groups.length > 0
+    function focusResults() {
+        if (!hasResults) return false
+        resultsList.forceActiveFocus()
+        return true
+    }
+
     // Hardware keyboards (and Steam's on-screen keyboard) type directly.
+    // Y (gamepad) or Tab jumps from the keyboard straight to the results.
     Keys.onPressed: event => {
-        if (event.key === Qt.Key_Backspace) {
+        if ((event.key === Qt.Key_Menu || event.key === Qt.Key_Tab) && keyboard.activeFocus) {
+            event.accepted = root.focusResults()
+        } else if (event.key === Qt.Key_Backspace) {
             root.query = root.query.slice(0, -1)
             event.accepted = true
         } else if (event.text && event.text.length === 1 && event.text >= " "
@@ -133,10 +150,7 @@ FocusScope {
             onTyped: t => root.query += t
             onBackspace: root.query = root.query.slice(0, -1)
             onCleared: root.query = ""
-            Keys.onRightPressed: event => {
-                if (resultsList.count > 0) resultsList.forceActiveFocus()
-                else event.accepted = false
-            }
+            Keys.onRightPressed: event => { event.accepted = root.focusResults() }
         }
 
         Text {
@@ -148,11 +162,19 @@ FocusScope {
             wrapMode: Text.WordWrap
             visible: root.status === "ready"
         }
+
+        ButtonHint {
+            visible: root.hasResults && keyboard.activeFocus
+            action: "results"
+            label: qsTr("Go to results")
+        }
     }
 
     Item {
         id: resultsArea
-        anchors { left: inputColumn.right; leftMargin: Theme.space.xxxl; right: parent.right; top: parent.top; bottom: parent.bottom }
+        // Room for the focus lift and ring of the first card/row.
+        readonly property real inset: Theme.focusGap + Theme.focusWidth + Theme.dp(16)
+        anchors { left: inputColumn.right; leftMargin: Theme.space.xxxl - inset; right: parent.right; top: parent.top; bottom: parent.bottom }
 
         StatePanel {
             anchors.fill: parent
@@ -172,7 +194,7 @@ FocusScope {
             id: resultsList
             anchors.fill: parent
             anchors.topMargin: Theme.safeV
-            visible: root.status === "ready" && root.groups.length > 0
+            visible: root.hasResults
             clip: true
             model: root.groups
             spacing: Theme.space.xxxl
@@ -201,6 +223,7 @@ FocusScope {
                         title: groupLoader.modelData.title
                         items: groupLoader.modelData.items
                         cardWidth: Theme.dp(220)
+                        leftInset: resultsArea.inset
                         onItemActivated: (item, i) => root.itemActivated(item)
                     }
                 }
@@ -211,6 +234,7 @@ FocusScope {
                         height: tracksHeader.height + Theme.space.l + trackList.height
                         Text {
                             id: tracksHeader
+                            x: resultsArea.inset
                             text: groupLoader.modelData.title
                             color: parent.activeFocus ? Theme.surfaceContent : Theme.surfaceContentVariant
                             font.family: Theme.fontFamily
@@ -219,7 +243,7 @@ FocusScope {
                         }
                         ListView {
                             id: trackList
-                            anchors { top: tracksHeader.bottom; topMargin: Theme.space.l; left: parent.left; right: parent.right; rightMargin: Theme.safeH }
+                            anchors { top: tracksHeader.bottom; topMargin: Theme.space.l; left: parent.left; leftMargin: resultsArea.inset; right: parent.right; rightMargin: Theme.safeH }
                             focus: true
                             interactive: false
                             height: Math.min(count, 5) * (Theme.size.trackRow + spacing)

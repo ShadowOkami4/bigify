@@ -114,6 +114,9 @@ pub mod qobject {
         fn toggle_play(self: Pin<&mut Self>);
         #[qinvokable]
         fn next(self: Pin<&mut Self>);
+        /// Play the `count`-th upcoming queue entry (1 = next).
+        #[qinvokable]
+        fn skip_forward(self: Pin<&mut Self>, count: i32);
         #[qinvokable]
         fn previous(self: Pin<&mut Self>);
         #[qinvokable]
@@ -396,6 +399,8 @@ impl cxx_qt::Initialize for qobject::Backend {
             "windowSize": env("BIGIFY_WINDOW_SIZE"),
             "inputMode": env("BIGIFY_INPUT_MODE"),
             "controller": env("BIGIFY_CONTROLLER"),
+            // Design preview only: a local image to stand in for album art.
+            "artwork": env("BIGIFY_PREVIEW_ART"),
         })));
 
         {
@@ -863,6 +868,16 @@ impl qobject::Backend {
 
     pub fn next(self: Pin<&mut Self>) {
         self.request(Intent::Next, Command::Next);
+    }
+
+    pub fn skip_forward(self: Pin<&mut Self>, count: i32) {
+        let count = count.clamp(1, 100) as u32;
+        let cmd = if count == 1 {
+            Command::Next
+        } else {
+            Command::SkipForward(count)
+        };
+        self.request(Intent::Next, cmd);
     }
 
     pub fn previous(self: Pin<&mut Self>) {

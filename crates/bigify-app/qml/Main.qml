@@ -104,6 +104,22 @@ Window {
             focusBeforeOverlay = null
         }
 
+        // LT/RT: ±10 s. Quick repeated presses add up from the last target,
+        // because the confirmed position lags behind a pending seek.
+        property real lastSeekTarget: 0
+        property real lastSeekAt: 0
+        function seekBy(delta) {
+            if (!Backend.hasTrack || Backend.durationMs <= 0) return
+            const now = Date.now()
+            const confirmed = Backend.positionMs
+                + (Backend.isPlaying ? Math.max(0, now - Backend.positionSampledAt) : 0)
+            const base = now - lastSeekAt < 1500 ? lastSeekTarget : confirmed
+            const target = Math.max(0, Math.min(Backend.durationMs - 1000, base + delta))
+            lastSeekTarget = target
+            lastSeekAt = now
+            Backend.seek(Math.round(target))
+        }
+
         function openNowPlaying() {
             if (nowPlayingOpen) return
             rememberFocus()
@@ -152,6 +168,12 @@ Window {
                 break
             case Qt.Key_MediaPrevious:
                 if (!event.isAutoRepeat) Backend.previous()
+                break
+            case Qt.Key_AudioRewind:
+                if (!event.isAutoRepeat) app.seekBy(-10000)
+                break
+            case Qt.Key_AudioForward:
+                if (!event.isAutoRepeat) app.seekBy(10000)
                 break
             case Qt.Key_VolumeUp:
                 Backend.stepVolume(0.05)
@@ -220,6 +242,7 @@ Window {
                 SectionPage {
                     sectionId: "search"
                     SearchScreen {
+                        id: search
                         focus: true
                         anchors.fill: parent
                         onItemActivated: item => app.activate(item, "search")
@@ -317,6 +340,11 @@ Window {
             onQuitRequested: Qt.quit()
         }
 
+        VolumeIndicator {
+            z: 45
+            anchors { top: parent.top; topMargin: Theme.safeV; right: parent.right; rightMargin: Theme.safeH }
+        }
+
         Toast {
             id: toast
             z: 40
@@ -346,6 +374,8 @@ Window {
         Shortcut { sequence: "Ctrl+P"; enabled: !app.showSignIn; onActivated: Backend.togglePlay() }
         Shortcut { sequence: "Ctrl+Right"; enabled: !app.showSignIn; onActivated: Backend.next() }
         Shortcut { sequence: "Ctrl+Left"; enabled: !app.showSignIn; onActivated: Backend.previous() }
+        Shortcut { sequence: "Ctrl+Shift+Left"; enabled: !app.showSignIn; onActivated: app.seekBy(-10000) }
+        Shortcut { sequence: "Ctrl+Shift+Right"; enabled: !app.showSignIn; onActivated: app.seekBy(10000) }
         Shortcut { sequence: "Ctrl+Up"; autoRepeat: true; enabled: !app.showSignIn; onActivated: Backend.stepVolume(0.05) }
         Shortcut { sequence: "Ctrl+Down"; autoRepeat: true; enabled: !app.showSignIn; onActivated: Backend.stepVolume(-0.05) }
 
@@ -415,6 +445,7 @@ Window {
                 Backend.volume = 0.62
                 if (window.dev.inputMode) Backend.inputMode = window.dev.inputMode
                 if (window.dev.controller) Backend.controllerFamily = window.dev.controller
+                if (window.dev.artwork) Backend.artworkUrl = window.dev.artwork
                 app.everConnected = true
                 home.reload()
                 library.reload()
@@ -426,8 +457,8 @@ Window {
             else if (start === "immersiveLyrics") { app.openNowPlaying(); nowPlaying.toggleLyrics(); nowPlaying.enterImmersive() }
             else if (start === "queue") { app.openNowPlaying(); app.openQueue() }
             else if (start === "rail") rail.forceActiveFocus()
-            else if (start === "lyrics") { app.openNowPlaying(); nowPlaying.toggleLyrics() }
-            else if (start === "immersive") { app.openNowPlaying(); nowPlaying.enterImmersive() }
+            else if (start === "libraryGrid") { app.section = "library"; Qt.callLater(library.focusGrid) }
+            else if (start === "searchResults") { app.section = "search"; Qt.callLater(search.previewResults) }
             else if (start === "artist" && Backend.designPreview) setDetail("home", PreviewData.homeSections[3].items[0])
             else if (start === "album" && Backend.designPreview) setDetail("home", PreviewData.homeSections[4].items[0])
             else if (start && start !== "home") app.section = start

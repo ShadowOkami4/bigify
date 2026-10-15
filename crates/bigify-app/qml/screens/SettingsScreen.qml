@@ -145,7 +145,7 @@ FocusScope {
             options: '[{"value":0.9,"label":"Compact"},{"value":1.0,"label":"Default"},{"value":1.15,"label":"Large"},{"value":1.3,"label":"Extra large"}]' }
         // Controls
         ListElement { group: "Controls"; key: "controllerInput"; label: "Read controllers directly"; description: "Turn off if Steam Input already maps your controller to keyboard keys and you see double input."; control: "toggle"; destructive: false; options: "" }
-        ListElement { group: "Controls"; key: "help"; label: "Controller map"; description: "D-pad/stick move · A select · B back · X play/pause · Y add to queue · LB/RB previous/next · LT/RT volume · Start Now Playing · Select Up next"; control: "info"; destructive: false; options: "" }
+        ListElement { group: "Controls"; key: "help"; label: "Controller map"; description: "D-pad/stick move · A select · B back · X play/pause · Y add to queue · LB/RB previous/next · LT/RT −10 s/+10 s · Start Now Playing · Select Up next"; control: "info"; destructive: false; options: "" }
         // About
         ListElement { group: "About"; key: "version"; label: "Bigify version"; description: "Free software under the GNU GPL v3 or later. Playback by librespot (MIT). UI by Qt (LGPL v3). Bigify is an independent project, not affiliated with or endorsed by Spotify."; control: "info"; destructive: false; options: "" }
         ListElement { group: "About"; key: "logFile"; label: "Log file"; description: "Attach this file to bug reports. It never contains passwords or tokens."; control: "info"; destructive: false; options: "" }

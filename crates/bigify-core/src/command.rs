@@ -49,6 +49,8 @@ pub enum Command {
     Play,
     Pause,
     Next,
+    /// Skip ahead this many tracks (play an entry further down the queue).
+    SkipForward(u32),
     Previous,
     Seek(u32),
     SetShuffle(bool),

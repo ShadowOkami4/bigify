@@ -1,8 +1,8 @@
 import QtQuick
 import Bigify
 
-// "Up next" side sheet. Read-only: Spotify's public interfaces let Bigify
-// show the queue and add to it, but not reorder or remove items.
+// "Up next" side sheet. Shows the queue; selecting an entry skips ahead to
+// it. Spotify's public interfaces don't allow reordering or removing items.
 FocusScope {
     id: root
     property bool open: false
@@ -62,7 +62,11 @@ FocusScope {
             id: note
             anchors { top: header.bottom; topMargin: Theme.space.s; left: header.left; right: parent.right; rightMargin: Theme.space.xxxl }
             spacing: Theme.space.s
-            ButtonHint { action: "more"; label: qsTr("on any song adds it here") }
+            Row {
+                spacing: Theme.space.xl
+                ButtonHint { action: "select"; label: qsTr("Play from here") }
+                ButtonHint { action: "more"; label: qsTr("on any song adds it here") }
+            }
             Text {
                 width: parent.width
                 text: qsTr("Reordering isn't available through Spotify's public interfaces.")
@@ -86,7 +90,11 @@ FocusScope {
 
         ListView {
             id: list
-            anchors { top: note.bottom; topMargin: Theme.space.xxl; left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: Theme.space.xxl; rightMargin: Theme.space.xxl }
+            anchors { top: note.bottom; topMargin: Theme.space.xxl; left: parent.left; right: parent.right; bottom: parent.bottom }
+            // Content margins (not anchor margins), so the clip leaves room
+            // for the focus ring at the sides.
+            leftMargin: Theme.space.xxl
+            rightMargin: Theme.space.xxl
             visible: root.status === "ready" && root.queue !== null
             focus: true
             clip: true
@@ -103,7 +111,7 @@ FocusScope {
             delegate: FocusScope {
                 required property var modelData
                 required property int index
-                width: list.width
+                width: list.width - list.leftMargin - list.rightMargin
                 height: entry.height
                 focus: ListView.isCurrentItem
               Column {
@@ -124,6 +132,12 @@ FocusScope {
                     focus: true
                     item: modelData
                     showQueueAction: false
+                    // Spotify has no "jump to queue entry", but Bigify is the
+                    // player: skipping n times reaches the n-th upcoming song.
+                    onActivated: {
+                        const first = root.queue.current ? 1 : 0
+                        if (index >= first) Backend.skipForward(index - first + 1)
+                    }
                 }
               }
             }

@@ -27,8 +27,8 @@ int keyForAction(std::int32_t action)
     case 7: return Qt::Key_Menu;              // Y / Triangle: more actions
     case 8: return Qt::Key_MediaPrevious;     // LB
     case 9: return Qt::Key_MediaNext;         // RB
-    case 10: return Qt::Key_VolumeDown;       // LT
-    case 11: return Qt::Key_VolumeUp;         // RT
+    case 10: return Qt::Key_AudioRewind;      // LT: back 10 s
+    case 11: return Qt::Key_AudioForward;     // RT: forward 10 s
     case 12: return Qt::Key_F2;               // Start: Now Playing
     case 13: return Qt::Key_F3;               // Select/View: Queue
     default: return 0;

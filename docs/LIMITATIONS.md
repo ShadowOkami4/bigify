@@ -57,6 +57,7 @@ clients have done (the maintainers chose this option; see
 | Artist page: albums, singles & EPs | ⚠️ | Web API `artists/{id}/albums`, librespot fallback | Falls back to librespot album metadata if the Web API refuses |
 | Queue: view | ⚠️ | Web API `GET /me/player/queue` | Read-only |
 | Queue: add | ⚠️ | Web API `POST /me/player/queue` | |
+| Queue: play an upcoming entry | ✅ | librespot (Spirc) | Skips ahead n tracks locally; no Web API call |
 | Queue: reorder / remove | ❌ | — | No public interface |
 | Save / unsave albums, playlists, tracks; follow artists | ⚠️ | Web API `PUT/DELETE /me/library` (new) with fallback to type-specific endpoints; `/me/following` for artists | Buttons appear only after Spotify reports the current state; changes show as pending until confirmed |
 | Lyrics (synced and plain) | ✅ | [LRCLIB](https://lrclib.net) (open, keyless API) | Fetched only when you open lyrics; sends title, artist, album and duration to lrclib.net. Coverage depends on the community database |
