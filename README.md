@@ -15,6 +15,8 @@ Machines and Steam Deck.**
 [Install](#install) · [Features](#features) · [Controls](#controls) ·
 [Build](#build-from-source) · [Documentation](#documentation)
 
+<a href="https://ko-fi.com/W7W31TOGEY"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi"></a>
+
 </div>
 
 <p align="center">
@@ -30,6 +32,15 @@ always-visible focus ring and nothing that needs a mouse.
 > Bigify is an independent, community-developed open-source project. It is
 > **not affiliated with, endorsed by or sponsored by Spotify**. A Spotify
 > Premium account is required.
+
+## About this project
+
+I'm still learning Rust, and I needed this app for a party, so I built it
+with a lot of help from LLMs (AI coding assistants). It works and I use it,
+but expect rough edges and possibly bugs. As I get more experienced I plan to
+keep Bigify maintained and to understand and improve every part of it
+myself. Bug reports and pull requests are very welcome; see
+[Contributing](CONTRIBUTING.md).
 
 ## Screenshots
 
@@ -161,6 +172,12 @@ test suite are covered in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 | [Install](docs/INSTALL.md) | Steam Deck and SteamOS guide |
 | [Development](docs/DEVELOPMENT.md) | Building, testing, packaging |
 | [Contributing](CONTRIBUTING.md) | How to help |
+
+## Support
+
+If Bigify livened up your party too, you can buy me a coffee:
+
+<a href="https://ko-fi.com/W7W31TOGEY"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi"></a>
 
 ## License
 
