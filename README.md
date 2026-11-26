@@ -119,7 +119,6 @@ recommended controller layout.
 | Y | Lyrics (Now Playing) · add to queue (tracks) · go to results (Search) | L · Q · Tab |
 | LB / RB | Previous / next track | Ctrl+← / Ctrl+→ |
 | LT / RT | Back / forward 10 s | Ctrl+Shift+← / → |
-| Volume keys | Volume down / up | Ctrl+↓ / Ctrl+↑ |
 | Start / Select | Now Playing / Up next | F2 / F3 |
 
 Steam Input tips and the full navigation model are in

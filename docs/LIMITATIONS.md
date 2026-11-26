@@ -41,7 +41,7 @@ clients have done (the maintainers chose this option; see
 | Stay signed in | ✅ | librespot cache | Reusable credentials in `$XDG_STATE_HOME/bigify/credentials.json` (mode 0600) |
 | Play / pause / next / previous / seek | ✅ | Spirc | Bigify is the playing device |
 | Shuffle, repeat (context / track) | ✅ | Spirc | |
-| Volume | ✅ | Spirc + softmixer | Software volume on Bigify's own output |
+| Volume | ✅ | Fixed mixer | Bigify always plays at full level; loudness is set with the system volume (Deck volume buttons, SteamOS quick settings, TV PC). The volume slider in Spotify on your phone is disabled for Bigify |
 | Track metadata and artwork | ✅ | librespot player events | Title, artists, album, duration, cover |
 | Confirmed playback position | ✅ | player events | UI extrapolates between confirmed samples only while playing |
 | Controlled from phone/desktop app | ✅ | Spotify Connect | Bigify appears as a TV device |

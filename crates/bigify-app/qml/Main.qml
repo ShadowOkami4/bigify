@@ -175,12 +175,6 @@ Window {
             case Qt.Key_AudioForward:
                 if (!event.isAutoRepeat) app.seekBy(10000)
                 break
-            case Qt.Key_VolumeUp:
-                Backend.stepVolume(0.05)
-                break
-            case Qt.Key_VolumeDown:
-                Backend.stepVolume(-0.05)
-                break
             case Qt.Key_F2:
                 if (!event.isAutoRepeat) nowPlayingOpen ? closeNowPlaying() : openNowPlaying()
                 break
@@ -340,11 +334,6 @@ Window {
             onQuitRequested: Qt.quit()
         }
 
-        VolumeIndicator {
-            z: 45
-            anchors { top: parent.top; topMargin: Theme.safeV; right: parent.right; rightMargin: Theme.safeH }
-        }
-
         Toast {
             id: toast
             z: 40
@@ -376,8 +365,6 @@ Window {
         Shortcut { sequence: "Ctrl+Left"; enabled: !app.showSignIn; onActivated: Backend.previous() }
         Shortcut { sequence: "Ctrl+Shift+Left"; enabled: !app.showSignIn; onActivated: app.seekBy(-10000) }
         Shortcut { sequence: "Ctrl+Shift+Right"; enabled: !app.showSignIn; onActivated: app.seekBy(10000) }
-        Shortcut { sequence: "Ctrl+Up"; autoRepeat: true; enabled: !app.showSignIn; onActivated: Backend.stepVolume(0.05) }
-        Shortcut { sequence: "Ctrl+Down"; autoRepeat: true; enabled: !app.showSignIn; onActivated: Backend.stepVolume(-0.05) }
 
         // ---- Backend wiring ------------------------------------------------
         Connections {

@@ -14,7 +14,6 @@ naming; PlayStation and Steam Deck buttons map by position.
 | Y | More: add the focused track to the queue; on Now Playing: lyrics; in Search: jump from the keyboard to the results | Q, Menu key; L for lyrics; Tab in Search |
 | LB / RB | Previous / next track | Ctrl+← / Ctrl+→, Media Previous / Next |
 | LT / RT | Seek back / forward 10 s | Ctrl+Shift+← / Ctrl+Shift+→ |
-| Volume keys (Deck, TV remote, keyboard) | Volume down / up; a volume indicator appears briefly (there is no on-screen volume control, as in Spotify's TV app) | Ctrl+↓ / Ctrl+↑ |
 | Start (☰) | Open / close Now Playing | F2 |
 | Select / View (⧉) | Open / close Up next (queue) | F3 |
 | Guide / Steam | Not used; left to the system | — |
@@ -62,7 +61,7 @@ through MPRIS (`org.mpris.MediaPlayer2.Bigify`). Try it with
 - **Immersive Now Playing.** After 6 s without input while music plays, the
   controls fade out and only artwork, title and progress (or lyrics) remain.
   The first arrow/A/B press just brings the controls back; play/pause,
-  previous/next, seeking, volume and lyrics keep working without waking.
+  previous/next, seeking and lyrics keep working without waking.
 - **Mini player.** Down from the bottom of a page focuses the mini player;
   A opens Now Playing; Up returns to the page.
 

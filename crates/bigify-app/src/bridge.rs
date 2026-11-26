@@ -288,7 +288,6 @@ const RESTART_KEYS: &[&str] = &[
     "audioBackend",
     "normalisation",
     "gapless",
-    "initialVolume",
     "zeroconfDiscovery",
 ];
 
@@ -645,7 +644,8 @@ impl qobject::Backend {
                 self.as_mut()
                     .request(Intent::Repeat(mode), Command::SetRepeat(mode));
             }
-            Control::Volume(v) => self.set_volume_level(v),
+            // Volume is fixed at full level; the system controls loudness.
+            Control::Volume(_) => {}
         }
     }
 

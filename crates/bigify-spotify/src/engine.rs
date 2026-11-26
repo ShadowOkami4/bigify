@@ -31,7 +31,7 @@ use librespot::discovery::Discovery;
 use librespot::oauth::OAuthClientBuilder;
 use librespot::playback::audio_backend;
 use librespot::playback::config::{AudioFormat, Bitrate, PlayerConfig};
-use librespot::playback::mixer::{self, Mixer, MixerConfig};
+use librespot::playback::mixer::{Mixer, MixerConfig};
 use librespot::playback::player::{Player, PlayerEvent};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::Instant;
@@ -129,10 +129,10 @@ impl Engine {
         })
         .ok();
 
-        let mixer_builder = mixer::find(None)
-            .ok_or_else(|| ServiceError::internal("No software mixer available"))?;
-        let mixer = mixer_builder(MixerConfig::default())
-            .map_err(|e| ServiceError::internal(format!("Mixer failed: {e}")))?;
+        let mixer: Arc<dyn Mixer> = Arc::new(
+            FixedMixer::open(MixerConfig::default())
+                .map_err(|e| ServiceError::internal(format!("Mixer failed: {e}")))?,
+        );
 
         let session = Session::new(session_config.clone(), cache.clone());
         let player = Self::make_player(&settings, &session, &mixer);
@@ -351,8 +351,10 @@ impl Engine {
         let connect_config = ConnectConfig {
             name: self.settings.device_name.clone(),
             device_type: DeviceType::Tv,
-            initial_volume: (u32::from(self.settings.initial_volume) * u32::from(u16::MAX) / 100)
-                as u16,
+            // Loudness belongs to the system (Steam Deck / TV PC): Bigify
+            // always plays at full level and hides the remote volume slider.
+            initial_volume: u16::MAX,
+            disable_volume: true,
             ..ConnectConfig::default()
         };
         let attempt = Spirc::new(
@@ -694,7 +696,8 @@ impl Engine {
                 RepeatMode::Context => spirc.repeat_track(false).and_then(|_| spirc.repeat(true)),
                 RepeatMode::Track => spirc.repeat(true).and_then(|_| spirc.repeat_track(true)),
             },
-            Command::SetVolume(v) => spirc.set_volume(v),
+            // Volume is fixed; see `FixedMixer`.
+            Command::SetVolume(_) => Ok(()),
             Command::PlayContext {
                 context_uri,
                 track_uri,
@@ -1001,4 +1004,21 @@ fn command_name(cmd: &Command) -> &'static str {
         Command::LoadPalette { .. } => "LoadPalette",
         Command::Shutdown => "Shutdown",
     }
+}
+
+/// A mixer that never attenuates: output is always at full level so the
+/// system volume (Steam Deck, TV PC) is the only loudness control. Remote
+/// volume changes from Spotify Connect are accepted but ignored.
+struct FixedMixer;
+
+impl Mixer for FixedMixer {
+    fn open(_config: MixerConfig) -> Result<Self, librespot::core::Error> {
+        Ok(Self)
+    }
+
+    fn volume(&self) -> u16 {
+        u16::MAX
+    }
+
+    fn set_volume(&self, _volume: u16) {}
 }
