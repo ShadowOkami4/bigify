@@ -52,6 +52,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.1.5" date="2026-11-26">
+      <description>
+        <p>Much louder playback: Bigify now always plays at full level and the system volume (Steam Deck buttons, SteamOS quick settings, TV PC) is the only volume control. The volume slider in the Spotify app is disabled for Bigify.</p>
+      </description>
+    </release>
     <release version="0.1.4" date="2026-10-15">
       <description>
         <p>Library items can be selected with a controller again; search results no longer cut off the focus outline, and Y (or Tab) jumps from the keyboard to the results; the Now Playing backdrop fills the screen; songs in Up next can be played directly; L2/R2 (LT/RT) skip 10 seconds back and forward; volume is shown as a brief indicator instead of on-screen controls.</p>
